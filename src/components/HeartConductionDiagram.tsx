@@ -1,11 +1,16 @@
+import { useMemo } from 'react';
 import type {
   ConductionPartId,
   EcgCondition,
+  LeadWaveParams,
   StageId,
 } from '../data/ecgConditions';
+import { computeHeartPropagation } from '../utils/heartPropagation';
 
 export interface HeartConductionDiagramProps {
   condition: EcgCondition;
+  leadParams: LeadWaveParams;
+  cycleProgress: number;
   activeStage: StageId | null;
   onSelectStage: (stage: StageId) => void;
 }
@@ -143,32 +148,135 @@ const EXTERIOR_CALLOUTS: ExteriorCallout[] = [
   },
 ];
 
+const RA_PATH =
+  'M 196 82 C 166 94, 158 152, 188 188 L 270 192 L 268 96 C 250 80, 222 76, 196 82 Z';
+const LA_PATH =
+  'M 278 96 C 312 78, 366 88, 380 134 C 390 164, 376 186, 356 192 L 280 192 Z';
+const VENT_WALL_PATH =
+  'M 186 200 C 170 254, 190 330, 294 366 C 372 354, 406 274, 366 200 L 344 200 C 374 264, 350 326, 294 340 C 282 336, 276 328, 270 320 L 292 214 L 274 214 L 254 316 C 210 296, 194 250, 202 200 Z';
+
+const RV_PURKINJE_PATHS = [
+  'M 220 302 L 196 290',
+  'M 210 284 L 190 264',
+  'M 206 280 L 190 238',
+];
+
+const LV_INF_PURKINJE_PATHS = [
+  'M 306 330 L 316 348',
+  'M 332 316 L 354 328',
+  'M 342 294 L 366 296',
+];
+
+const LV_ANT_PURKINJE_PATHS = [
+  'M 342 258 L 370 260',
+  'M 334 256 L 364 228',
+];
+
+interface ProgressiveTractPathProps {
+  d: string;
+  progress: number;
+  intensity: number;
+  baseStrokeWidth: number;
+  activeStrokeWidth: number;
+  activeColor: string;
+  inactiveColor?: string;
+  sparkColor?: string;
+  dashedBase?: string;
+}
+
+function ProgressiveTractPath({
+  d,
+  progress,
+  intensity,
+  baseStrokeWidth,
+  activeStrokeWidth,
+  activeColor,
+  inactiveColor = '#cbd5e1',
+  sparkColor = '#fef9c3',
+  dashedBase,
+}: ProgressiveTractPathProps) {
+  const showActive = progress > 0.005 && intensity > 0.01;
+  const showSpark = showActive && progress > 0.02 && progress < 0.97;
+  const dashLength = Math.max(0.05, progress * 100);
+  const sparkOffset = -Math.max(0, progress * 100 - 1.8);
+
+  return (
+    <>
+      <path
+        d={d}
+        fill="none"
+        stroke={inactiveColor}
+        strokeWidth={baseStrokeWidth}
+        strokeDasharray={dashedBase}
+        strokeLinecap="round"
+      />
+      {showActive && (
+        <path
+          d={d}
+          pathLength={100}
+          fill="none"
+          stroke={activeColor}
+          strokeWidth={activeStrokeWidth}
+          strokeDasharray={`${dashLength} 110`}
+          strokeLinecap="round"
+          opacity={intensity}
+        />
+      )}
+      {showSpark && (
+        <path
+          d={d}
+          pathLength={100}
+          fill="none"
+          stroke={sparkColor}
+          strokeWidth={activeStrokeWidth + 1.8}
+          strokeDasharray="1.8 110"
+          strokeDashoffset={sparkOffset}
+          strokeLinecap="round"
+          opacity={Math.min(1, intensity * 1.1)}
+        />
+      )}
+    </>
+  );
+}
+
 export function HeartConductionDiagram({
   condition,
+  leadParams,
+  cycleProgress,
   activeStage,
   onSelectStage,
 }: HeartConductionDiagramProps) {
+  const prop = useMemo(
+    () => computeHeartPropagation(condition, leadParams, cycleProgress),
+    [condition, leadParams, cycleProgress],
+  );
+
   const stageMeta = activeStage ? condition.stages[activeStage] : null;
   const activeParts = stageMeta ? stageMeta.activeParts : [];
 
   const isPartActive = (part: ConductionPartId) => activeParts.includes(part);
 
-  const rightAtriumActive = isPartActive('right-atrium');
-  const leftAtriumActive = isPartActive('left-atrium');
-  const atrialActive = rightAtriumActive || leftAtriumActive;
-  const ventricleActive = isPartActive('right-ventricle') || isPartActive('left-ventricle');
+  const rightAtriumActive =
+    prop.raWave.intensity > 0.15 || isPartActive('right-atrium');
+  const leftAtriumActive =
+    prop.laWave.intensity > 0.15 || isPartActive('left-atrium');
+  const atrialTractLit =
+    prop.internodalIntensity > 0.15 || prop.bachmannIntensity > 0.15;
 
-  const ventFill =
-    activeStage === 4
-      ? 'rgba(5, 150, 105, 0.22)'
-      : activeStage === 3
-        ? 'rgba(220, 38, 38, 0.22)'
-        : 'rgba(226, 232, 240, 0.45)';
+  const ventLit =
+    prop.rvWave.intensity > 0.15 ||
+    prop.lvWave.intensity > 0.15 ||
+    prop.repolIntensity > 0.15 ||
+    prop.stPlateauIntensity > 0.15;
 
   const ventStroke =
-    activeStage === 4 ? '#059669' : activeStage === 3 ? '#dc2626' : '#cbd5e1';
+    prop.repolIntensity > 0.18 || prop.stPlateauIntensity > 0.25
+      ? '#059669'
+      : prop.rvWave.intensity > 0.15 || prop.lvWave.intensity > 0.15
+        ? '#dc2626'
+        : '#cbd5e1';
 
-  const vectors = stageMeta ? stageMeta.vectors : [];
+  const legendVectors = stageMeta ? stageMeta.vectors : [];
 
   return (
     <section className="visual-card" aria-label="Visualisasi Anatomi dan Konduksi Jantung">
@@ -208,6 +316,22 @@ export function HeartConductionDiagram({
                 <feMergeNode in="SourceGraphic" />
               </feMerge>
             </filter>
+
+            <clipPath id="ra-myo-clip">
+              <path d={RA_PATH} />
+            </clipPath>
+            <clipPath id="la-myo-clip">
+              <path d={LA_PATH} />
+            </clipPath>
+            <clipPath id="vent-wall-clip">
+              <path d={VENT_WALL_PATH} />
+            </clipPath>
+            <clipPath id="rv-region-clip">
+              <rect x="150" y="190" width="138" height="190" />
+            </clipPath>
+            <clipPath id="lv-region-clip">
+              <rect x="272" y="190" width="145" height="190" />
+            </clipPath>
 
             <marker
               id="vec-arrow-blue"
@@ -277,64 +401,111 @@ export function HeartConductionDiagram({
               fill="none"
             />
 
-            {/* Atrium Kanan & Atrium Kiri */}
+            {/* Atrium Kanan & Atrium Kiri (Dasar + Gelombang Depolarisasi Progresif Terklip) */}
             <path
-              d="M 196 82 C 166 94, 158 152, 188 188 L 270 192 L 268 96 C 250 80, 222 76, 196 82 Z"
+              d={RA_PATH}
               fill={
-                rightAtriumActive
-                  ? 'rgba(37, 99, 235, 0.2)'
-                  : condition.hypertrophyZone === 'right-atrium'
-                    ? 'rgba(37, 99, 235, 0.08)'
-                    : '#f8fafc'
+                condition.hypertrophyZone === 'right-atrium'
+                  ? 'rgba(37, 99, 235, 0.08)'
+                  : '#f8fafc'
               }
+              className="clickable-anatomy"
+              onClick={() => onSelectStage(1)}
+            />
+            {prop.raWave.spread > 0.01 && prop.raWave.intensity > 0.01 && (
+              <g clipPath="url(#ra-myo-clip)" pointerEvents="none">
+                <circle
+                  cx={prop.raWave.originX}
+                  cy={prop.raWave.originY}
+                  r={prop.raWave.spread * prop.raWave.maxRadius}
+                  fill={`rgba(37, 99, 235, ${0.24 * prop.raWave.intensity})`}
+                />
+                <circle
+                  cx={prop.raWave.originX}
+                  cy={prop.raWave.originY}
+                  r={prop.raWave.spread * prop.raWave.maxRadius}
+                  fill="none"
+                  stroke="#3b82f6"
+                  strokeWidth="2.4"
+                  opacity={prop.raWave.intensity * (1 - prop.raWave.spread * 0.5)}
+                />
+              </g>
+            )}
+            <path
+              d={RA_PATH}
+              fill="none"
               stroke={
                 rightAtriumActive || condition.hypertrophyZone === 'right-atrium'
                   ? '#2563eb'
                   : '#cbd5e1'
               }
               strokeWidth={
-                rightAtriumActive
+                prop.raWave.intensity > 0.15
                   ? 2.8
                   : condition.hypertrophyZone === 'right-atrium'
                     ? 2.2
                     : 1.8
               }
               filter={
-                rightAtriumActive && condition.hypertrophyZone === 'right-atrium'
+                prop.raWave.intensity > 0.25 &&
+                condition.hypertrophyZone === 'right-atrium'
                   ? 'url(#part-glow)'
                   : undefined
+              }
+              pointerEvents="none"
+            />
+
+            <path
+              d={LA_PATH}
+              fill={
+                condition.hypertrophyZone === 'left-atrium'
+                  ? 'rgba(37, 99, 235, 0.08)'
+                  : '#f8fafc'
               }
               className="clickable-anatomy"
               onClick={() => onSelectStage(1)}
             />
+            {prop.laWave.spread > 0.01 && prop.laWave.intensity > 0.01 && (
+              <g clipPath="url(#la-myo-clip)" pointerEvents="none">
+                <circle
+                  cx={prop.laWave.originX}
+                  cy={prop.laWave.originY}
+                  r={prop.laWave.spread * prop.laWave.maxRadius}
+                  fill={`rgba(37, 99, 235, ${0.24 * prop.laWave.intensity})`}
+                />
+                <circle
+                  cx={prop.laWave.originX}
+                  cy={prop.laWave.originY}
+                  r={prop.laWave.spread * prop.laWave.maxRadius}
+                  fill="none"
+                  stroke="#3b82f6"
+                  strokeWidth="2.4"
+                  opacity={prop.laWave.intensity * (1 - prop.laWave.spread * 0.5)}
+                />
+              </g>
+            )}
             <path
-              d="M 278 96 C 312 78, 366 88, 380 134 C 390 164, 376 186, 356 192 L 280 192 Z"
-              fill={
-                leftAtriumActive
-                  ? 'rgba(37, 99, 235, 0.2)'
-                  : condition.hypertrophyZone === 'left-atrium'
-                    ? 'rgba(37, 99, 235, 0.08)'
-                    : '#f8fafc'
-              }
+              d={LA_PATH}
+              fill="none"
               stroke={
                 leftAtriumActive || condition.hypertrophyZone === 'left-atrium'
                   ? '#2563eb'
                   : '#cbd5e1'
               }
               strokeWidth={
-                leftAtriumActive
+                prop.laWave.intensity > 0.15
                   ? 2.8
                   : condition.hypertrophyZone === 'left-atrium'
                     ? 2.2
                     : 1.8
               }
               filter={
-                leftAtriumActive && condition.hypertrophyZone === 'left-atrium'
+                prop.laWave.intensity > 0.25 &&
+                condition.hypertrophyZone === 'left-atrium'
                   ? 'url(#part-glow)'
                   : undefined
               }
-              className="clickable-anatomy"
-              onClick={() => onSelectStage(1)}
+              pointerEvents="none"
             />
 
             {/* Cincin Isolator Fibrosa AV */}
@@ -357,39 +528,139 @@ export function HeartConductionDiagram({
               strokeLinecap="round"
             />
 
-            {/* Dinding Miokardium Ventrikel (RV, Septum, LV Tebal) */}
+            {/* Dinding Miokardium Ventrikel (RV, Septum, LV Tebal) + Sebaran Gelombang Progresif */}
             <g
               className="clickable-anatomy"
               onClick={() => onSelectStage(activeStage === 3 ? 4 : 3)}
             >
               <path
-                d="M 186 200 C 170 254, 190 330, 294 366 C 372 354, 406 274, 366 200 L 344 200 C 374 264, 350 326, 294 340 C 282 336, 276 328, 270 320 L 292 214 L 274 214 L 254 316 C 210 296, 194 250, 202 200 Z"
+                d={VENT_WALL_PATH}
                 fill={
-                  ventricleActive
-                    ? ventFill
-                    : condition.hypertrophyZone === 'left-ventricle' ||
-                        condition.hypertrophyZone === 'right-ventricle'
-                      ? 'rgba(220, 38, 38, 0.09)'
-                      : ventFill
+                  condition.hypertrophyZone === 'left-ventricle' ||
+                  condition.hypertrophyZone === 'right-ventricle'
+                    ? 'rgba(220, 38, 38, 0.09)'
+                    : 'rgba(226, 232, 240, 0.45)'
                 }
+              />
+
+              {/* Gelombang Depolarisasi & Repolarisasi Terklip di Dinding Ventrikel */}
+              <g clipPath="url(#vent-wall-clip)" pointerEvents="none">
+                {/* LV wave */}
+                {prop.lvWave.spread > 0.01 && prop.lvWave.intensity > 0.01 && (
+                  <g clipPath="url(#lv-region-clip)">
+                    <circle
+                      cx={prop.lvWave.originX}
+                      cy={prop.lvWave.originY}
+                      r={prop.lvWave.spread * prop.lvWave.maxRadius}
+                      fill={`rgba(220, 38, 38, ${0.25 * prop.lvWave.intensity})`}
+                    />
+                    <circle
+                      cx={prop.lvWave.originX}
+                      cy={prop.lvWave.originY}
+                      r={prop.lvWave.spread * prop.lvWave.maxRadius}
+                      fill="none"
+                      stroke={prop.lvWave.isSlowSpread ? '#ea580c' : '#dc2626'}
+                      strokeWidth={prop.lvWave.isSlowSpread ? 2.6 : 2.2}
+                      strokeDasharray={prop.lvWave.isSlowSpread ? '5 4' : undefined}
+                      opacity={prop.lvWave.intensity * (1 - prop.lvWave.spread * 0.4)}
+                    />
+                  </g>
+                )}
+
+                {/* RV wave (normal atau rambatan lambat trans-septal pada RBBB) */}
+                {prop.rvWave.spread > 0.01 && prop.rvWave.intensity > 0.01 && (
+                  <g clipPath="url(#rv-region-clip)">
+                    <circle
+                      cx={prop.rvWave.originX}
+                      cy={prop.rvWave.originY}
+                      r={prop.rvWave.spread * prop.rvWave.maxRadius}
+                      fill={
+                        prop.rvWave.isSlowSpread
+                          ? `rgba(234, 88, 12, ${0.24 * prop.rvWave.intensity})`
+                          : `rgba(220, 38, 38, ${0.24 * prop.rvWave.intensity})`
+                      }
+                    />
+                    <circle
+                      cx={prop.rvWave.originX}
+                      cy={prop.rvWave.originY}
+                      r={prop.rvWave.spread * prop.rvWave.maxRadius}
+                      fill="none"
+                      stroke={prop.rvWave.isSlowSpread ? '#ea580c' : '#dc2626'}
+                      strokeWidth={prop.rvWave.isSlowSpread ? 2.8 : 2.2}
+                      strokeDasharray={prop.rvWave.isSlowSpread ? '5 4' : undefined}
+                      opacity={prop.rvWave.intensity * (1 - prop.rvWave.spread * 0.35)}
+                    />
+                    {prop.rvWave.isSlowSpread && prop.rvWave.spread > 0.25 && (
+                      <circle
+                        cx={prop.rvWave.originX}
+                        cy={prop.rvWave.originY}
+                        r={prop.rvWave.spread * prop.rvWave.maxRadius * 0.62}
+                        fill="none"
+                        stroke="#f97316"
+                        strokeWidth="1.8"
+                        strokeDasharray="4 4"
+                        opacity={prop.rvWave.intensity * 0.65}
+                      />
+                    )}
+                  </g>
+                )}
+
+                {/* Fase Plateau ST (Segmen ST) */}
+                {prop.stPlateauIntensity > 0.01 && (
+                  <rect
+                    x="160"
+                    y="195"
+                    width="260"
+                    height="185"
+                    fill={`rgba(16, 185, 129, ${0.13 * prop.stPlateauIntensity})`}
+                  />
+                )}
+
+                {/* Sapuan Repolarisasi Ventrikel (Gelombang T: Epikardium -> Endokardium) */}
+                {prop.repolIntensity > 0.01 && prop.repolProgress > 0.01 && (
+                  <>
+                    <circle
+                      cx="306"
+                      cy="358"
+                      r={prop.repolProgress * 205}
+                      fill={`rgba(5, 150, 105, ${0.24 * prop.repolIntensity})`}
+                    />
+                    <circle
+                      cx="306"
+                      cy="358"
+                      r={prop.repolProgress * 205}
+                      fill="none"
+                      stroke="#059669"
+                      strokeWidth="2.4"
+                      opacity={prop.repolIntensity * (1 - prop.repolProgress * 0.45)}
+                    />
+                  </>
+                )}
+              </g>
+
+              {/* Garis tepi dinding ventrikel yang tajam */}
+              <path
+                d={VENT_WALL_PATH}
+                fill="none"
                 stroke={
-                  ventricleActive
+                  ventLit
                     ? ventStroke
                     : condition.hypertrophyZone === 'left-ventricle' ||
                         condition.hypertrophyZone === 'right-ventricle'
                       ? '#ef4444'
-                      : ventStroke
+                      : '#cbd5e1'
                 }
                 strokeWidth={
-                  ventricleActive
+                  ventLit
                     ? 2.6
                     : condition.hypertrophyZone === 'left-ventricle' ||
                         condition.hypertrophyZone === 'right-ventricle'
                       ? 2.2
                       : 1.8
                 }
-                filter={ventricleActive ? 'url(#part-glow)' : undefined}
+                filter={ventLit ? 'url(#part-glow)' : undefined}
               />
+
               {/* Rongga Dalam RV & LV */}
               <path
                 d="M 204 202 C 196 248, 212 294, 254 313 L 273 214 L 204 202 Z"
@@ -403,109 +674,177 @@ export function HeartConductionDiagram({
               />
             </g>
 
-            {/* JALUR INTERNODAL & BACHMANN (Menyala terang hanya di Tahap 1) */}
+            {/* JALUR INTERNODAL & BACHMANN (Mengalir di Tahap 1) */}
             <g
               className="clickable-anatomy"
               onClick={() => onSelectStage(1)}
-              filter={atrialActive ? 'url(#part-glow)' : undefined}
-              opacity={atrialActive ? 1 : 0.35}
+              filter={atrialTractLit ? 'url(#part-glow)' : undefined}
             >
-              <path
+              <ProgressiveTractPath
                 d="M 216 110 C 254 96, 302 98, 346 124"
-                fill="none"
-                stroke={atrialActive ? '#2563eb' : '#94a3b8'}
-                strokeWidth={atrialActive ? 4 : 2}
-                strokeLinecap="round"
+                progress={prop.bachmannProgress}
+                intensity={prop.bachmannIntensity}
+                baseStrokeWidth={2}
+                activeStrokeWidth={4}
+                activeColor="#2563eb"
+                inactiveColor="#cbd5e1"
+                sparkColor="#bfdbfe"
               />
-              <path
+              <ProgressiveTractPath
                 d="M 214 112 C 238 128, 254 150, 266 180"
-                fill="none"
-                stroke={atrialActive ? '#2563eb' : '#94a3b8'}
-                strokeWidth={atrialActive ? 3.5 : 1.8}
-                strokeLinecap="round"
+                progress={prop.internodalProgress}
+                intensity={prop.internodalIntensity}
+                baseStrokeWidth={1.8}
+                activeStrokeWidth={3.5}
+                activeColor="#2563eb"
+                inactiveColor="#cbd5e1"
+                sparkColor="#bfdbfe"
               />
-              <path
+              <ProgressiveTractPath
                 d="M 208 116 C 218 148, 240 168, 264 184"
-                fill="none"
-                stroke={atrialActive ? '#2563eb' : '#94a3b8'}
-                strokeWidth={atrialActive ? 3.2 : 1.8}
-                strokeDasharray="5 3"
-                strokeLinecap="round"
+                progress={prop.internodalProgress}
+                intensity={prop.internodalIntensity}
+                baseStrokeWidth={1.8}
+                activeStrokeWidth={3.2}
+                activeColor="#2563eb"
+                inactiveColor="#cbd5e1"
+                sparkColor="#bfdbfe"
+                dashedBase="5 3"
               />
             </g>
 
-            {/* BUNDLE OF HIS (Menyala di Tahap 2 & awal Tahap 3) */}
-            <path
-              d="M 271 190 L 283 226"
-              fill="none"
-              stroke={isPartActive('his-bundle') ? '#d97706' : '#cbd5e1'}
-              strokeWidth={isPartActive('his-bundle') ? 5.8 : 3.2}
-              strokeLinecap="round"
-              filter={isPartActive('his-bundle') ? 'url(#part-glow)' : undefined}
+            {/* BUNDLE OF HIS (Mengalir di akhir Tahap 2 -> awal Tahap 3) */}
+            <g
               className="clickable-anatomy"
               onClick={() => onSelectStage(2)}
-            />
+              filter={prop.hisIntensity > 0.2 ? 'url(#part-glow)' : undefined}
+            >
+              <ProgressiveTractPath
+                d="M 271 190 L 283 226"
+                progress={prop.hisProgress}
+                intensity={prop.hisIntensity}
+                baseStrokeWidth={3.2}
+                activeStrokeWidth={5.8}
+                activeColor="#d97706"
+                inactiveColor="#cbd5e1"
+                sparkColor="#fef08a"
+              />
+            </g>
 
-            {/* CABANG KANAN / RBB (Menyala terang di Tahap 3) */}
-            <path
-              d="M 282 226 L 258 316 C 242 324, 220 308, 206 280"
-              fill="none"
-              stroke={isPartActive('rbb') ? '#dc2626' : '#cbd5e1'}
-              strokeWidth={isPartActive('rbb') ? 4.4 : 2.2}
-              strokeLinecap="round"
-              filter={isPartActive('rbb') ? 'url(#part-glow)' : undefined}
-              className="clickable-anatomy"
-              onClick={() => onSelectStage(3)}
-            />
-
-            {/* CABANG KIRI / LBB (Menyala terang di Tahap 3) */}
+            {/* CABANG KANAN / RBB (Berhenti sebelum X bila RBBB) */}
             <g
               className="clickable-anatomy"
               onClick={() => onSelectStage(3)}
-              filter={isPartActive('lbb') ? 'url(#part-glow)' : undefined}
+              filter={prop.rbbIntensity > 0.2 && !prop.rbbBlocked ? 'url(#part-glow)' : undefined}
             >
-              <path
+              <ProgressiveTractPath
+                d="M 282 226 L 258 316 C 242 324, 220 308, 206 280"
+                progress={prop.rbbProgress}
+                intensity={prop.rbbIntensity}
+                baseStrokeWidth={2.2}
+                activeStrokeWidth={4.4}
+                activeColor={prop.rbbBlocked ? '#f59e0b' : '#dc2626'}
+                inactiveColor={prop.rbbBlocked ? '#e2e8f0' : '#cbd5e1'}
+                sparkColor="#fef08a"
+              />
+            </g>
+
+            {/* CABANG KIRI / LBB (Trunk/Posterior & Anterior Fascicle) */}
+            <g
+              className="clickable-anatomy"
+              onClick={() => onSelectStage(3)}
+              filter={
+                prop.lbbTrunkIntensity > 0.2 || prop.lafIntensity > 0.2
+                  ? 'url(#part-glow)'
+                  : undefined
+              }
+            >
+              <ProgressiveTractPath
                 d="M 284 226 L 278 314 C 292 336, 322 332, 342 304"
-                fill="none"
-                stroke={isPartActive('lbb') ? '#dc2626' : '#cbd5e1'}
-                strokeWidth={isPartActive('lbb') ? 4.6 : 2.4}
-                strokeLinecap="round"
+                progress={prop.lbbTrunkProgress}
+                intensity={prop.lbbTrunkIntensity}
+                baseStrokeWidth={2.4}
+                activeStrokeWidth={4.6}
+                activeColor="#dc2626"
+                inactiveColor={prop.lbbBlocked ? '#e2e8f0' : '#cbd5e1'}
+                sparkColor="#fef08a"
               />
-              <path
+              <ProgressiveTractPath
                 d="M 283 242 C 302 256, 322 268, 342 258"
-                fill="none"
-                stroke={isPartActive('lbb') ? '#ea580c' : '#cbd5e1'}
-                strokeWidth={isPartActive('lbb') ? 3.8 : 2}
-                strokeLinecap="round"
+                progress={prop.lafProgress}
+                intensity={prop.lafIntensity}
+                baseStrokeWidth={2}
+                activeStrokeWidth={3.8}
+                activeColor={prop.lafBlocked ? '#f59e0b' : '#ea580c'}
+                inactiveColor={prop.lbbBlocked || prop.lafBlocked ? '#e2e8f0' : '#cbd5e1'}
+                sparkColor="#fef08a"
               />
             </g>
 
-            {/* SERABUT PURKINJE (Menyala terang di Tahap 3) */}
+            {/* SERABUT PURKINJE (Bercabang simultan sesuai jalur yang teraktivasi) */}
             <g
               className="clickable-anatomy"
               onClick={() => onSelectStage(3)}
-              filter={isPartActive('purkinje') ? 'url(#part-glow)' : undefined}
+              filter={
+                prop.purkinjeRvIntensity > 0.2 ||
+                prop.purkinjeLvInfIntensity > 0.2 ||
+                prop.purkinjeLvAntIntensity > 0.2
+                  ? 'url(#part-glow)'
+                  : undefined
+              }
             >
-              <path
-                d="M 220 302 L 196 290 M 210 284 L 190 264 M 204 264 L 190 238 M 306 330 L 316 348 M 332 316 L 354 328 M 342 294 L 366 296 M 346 266 L 370 260 M 342 240 L 364 228"
-                fill="none"
-                stroke={isPartActive('purkinje') ? '#dc2626' : '#cbd5e1'}
-                strokeWidth={isPartActive('purkinje') ? 3.2 : 1.7}
-                strokeLinecap="round"
-              />
+              {RV_PURKINJE_PATHS.map((d) => (
+                <ProgressiveTractPath
+                  key={d}
+                  d={d}
+                  progress={prop.purkinjeRvProgress}
+                  intensity={prop.purkinjeRvIntensity}
+                  baseStrokeWidth={1.7}
+                  activeStrokeWidth={3.2}
+                  activeColor="#dc2626"
+                  inactiveColor={prop.rbbBlocked ? '#e2e8f0' : '#cbd5e1'}
+                  sparkColor="#fef08a"
+                />
+              ))}
+              {LV_INF_PURKINJE_PATHS.map((d) => (
+                <ProgressiveTractPath
+                  key={d}
+                  d={d}
+                  progress={prop.purkinjeLvInfProgress}
+                  intensity={prop.purkinjeLvInfIntensity}
+                  baseStrokeWidth={1.7}
+                  activeStrokeWidth={3.2}
+                  activeColor="#dc2626"
+                  inactiveColor={prop.lbbBlocked || prop.lpfBlocked ? '#e2e8f0' : '#cbd5e1'}
+                  sparkColor="#fef08a"
+                />
+              ))}
+              {LV_ANT_PURKINJE_PATHS.map((d) => (
+                <ProgressiveTractPath
+                  key={d}
+                  d={d}
+                  progress={prop.purkinjeLvAntProgress}
+                  intensity={prop.purkinjeLvAntIntensity}
+                  baseStrokeWidth={1.7}
+                  activeStrokeWidth={3.2}
+                  activeColor="#ea580c"
+                  inactiveColor={prop.lbbBlocked || prop.lafBlocked ? '#e2e8f0' : '#cbd5e1'}
+                  sparkColor="#fef08a"
+                />
+              ))}
             </g>
 
-            {/* SA NODE */}
+            {/* SA NODE (Sinkron deterministik dengan cycleProgress, bebas kedipan CSS) */}
             <g className="clickable-anatomy" onClick={() => onSelectStage(1)}>
-              {isPartActive('sa-node') && (
+              {prop.saActivity > 0.02 && (
                 <circle
                   cx="212"
                   cy="112"
-                  r="17"
-                  fill="rgba(37, 99, 235, 0.2)"
+                  r={11 + prop.saPulseProgress * 10}
+                  fill={`rgba(37, 99, 235, ${0.24 * prop.saActivity * (1 - prop.saPulseProgress * 0.45)})`}
                   stroke="#2563eb"
                   strokeWidth="1.5"
-                  className="sa-pulse-circle"
+                  opacity={prop.saActivity * (1 - prop.saPulseProgress * 0.4)}
                 />
               )}
               <ellipse
@@ -514,22 +853,24 @@ export function HeartConductionDiagram({
                 rx="9.5"
                 ry="6.8"
                 transform="rotate(-18 212 112)"
-                fill={isPartActive('sa-node') ? '#1d4ed8' : '#94a3b8'}
+                fill={prop.saActivity > 0.15 ? '#1d4ed8' : '#94a3b8'}
                 stroke="#ffffff"
                 strokeWidth="2"
+                filter={prop.saActivity > 0.25 ? 'url(#part-glow)' : undefined}
               />
             </g>
 
-            {/* AV NODE */}
+            {/* AV NODE (Jeda fisiologis sinkron dengan Segmen PR) */}
             <g className="clickable-anatomy" onClick={() => onSelectStage(2)}>
-              {isPartActive('av-node') && (
+              {prop.avActivity > 0.02 && (
                 <circle
                   cx="266"
                   cy="186"
-                  r="15"
-                  fill="rgba(217, 119, 6, 0.22)"
+                  r={10 + prop.avRingProgress * 7}
+                  fill={`rgba(217, 119, 6, ${0.24 * prop.avActivity})`}
                   stroke="#d97706"
                   strokeWidth="1.5"
+                  opacity={prop.avActivity * 0.9}
                 />
               )}
               <ellipse
@@ -537,9 +878,10 @@ export function HeartConductionDiagram({
                 cy="186"
                 rx="8.5"
                 ry="6.5"
-                fill={isPartActive('av-node') ? '#d97706' : '#94a3b8'}
+                fill={prop.avActivity > 0.15 ? '#d97706' : '#94a3b8'}
                 stroke="#ffffff"
                 strokeWidth="2"
+                filter={prop.avActivity > 0.25 ? 'url(#part-glow)' : undefined}
               />
             </g>
 
@@ -724,8 +1066,8 @@ export function HeartConductionDiagram({
               </g>
             )}
 
-            {/* PANAH VEKTOR AKTIF (Tanpa teks menimpa jantung) */}
-            {vectors.map((vec) => {
+            {/* PANAH VEKTOR AKTIF PROGRESIF (Tanpa teks menimpa jantung) */}
+            {prop.vectors.map((vec) => {
               const markerId =
                 vec.color === '#2563eb'
                   ? 'vec-arrow-blue'
@@ -738,12 +1080,12 @@ export function HeartConductionDiagram({
                         : 'vec-arrow-red';
 
               return (
-                <g key={vec.id} pointerEvents="none">
+                <g key={vec.id} pointerEvents="none" opacity={vec.opacity}>
                   <line
                     x1={vec.x1}
                     y1={vec.y1}
-                    x2={vec.x2}
-                    y2={vec.y2}
+                    x2={vec.currentX2}
+                    y2={vec.currentY2}
                     stroke="#ffffff"
                     strokeWidth="6"
                     strokeLinecap="round"
@@ -752,13 +1094,13 @@ export function HeartConductionDiagram({
                   <line
                     x1={vec.x1}
                     y1={vec.y1}
-                    x2={vec.x2}
-                    y2={vec.y2}
+                    x2={vec.currentX2}
+                    y2={vec.currentY2}
                     stroke={vec.color}
                     strokeWidth="3.4"
                     strokeDasharray={vec.dashed ? '5 4' : undefined}
                     strokeLinecap="round"
-                    markerEnd={`url(#${markerId})`}
+                    markerEnd={vec.scale > 0.18 ? `url(#${markerId})` : undefined}
                   />
                 </g>
               );
@@ -806,7 +1148,7 @@ export function HeartConductionDiagram({
           })}
 
           {/* KETERANGAN VEKTOR TERPISAH RAPI DI BAWAH APEKS JANTUNG */}
-          {vectors.length > 0 && (
+          {legendVectors.length > 0 && (
             <g transform="translate(300, 402)" pointerEvents="none">
               <rect
                 x="-195"
@@ -825,7 +1167,7 @@ export function HeartConductionDiagram({
                 fontWeight="700"
                 fill={stageMeta?.accentColor ?? '#334155'}
               >
-                Arah Vektor Aktif: {vectors.map((v) => v.label).join('  •  ')}
+                Arah Vektor Aktif: {legendVectors.map((v) => v.label).join('  •  ')}
               </text>
             </g>
           )}

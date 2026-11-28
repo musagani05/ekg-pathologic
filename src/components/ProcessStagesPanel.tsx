@@ -27,7 +27,7 @@ export function ProcessStagesPanel({
           Alur Sebab-Akibat Proses Listrik Jantung ke Gelombang EKG
         </h2>
         <span className="stages-section-hint">
-          Klik salah satu kartu tahap untuk menjeda dan menyorot visualisasi di atas
+          Klik salah satu kartu tahap untuk memutar ulang (loop) visualisasi fase tersebut
         </span>
       </div>
 

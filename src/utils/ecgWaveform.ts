@@ -226,6 +226,24 @@ export function getStageAtCycleProgress(
 }
 
 /**
+ * Mengembalikan rentang progres [startProgress, endProgress] dalam [0..1] untuk suatu tahap.
+ */
+export function getStageProgressRange(
+  params: LeadWaveParams,
+  heartRateBpm: number,
+  stageId: StageId,
+): { startProgress: number; endProgress: number } {
+  const win = getBeatStageWindows(params, heartRateBpm);
+  const range = win.stageWindows[stageId];
+  const startProgress = Math.max(0, Math.min(0.99, range.startMs / win.cycleMs));
+  const endProgress = Math.max(
+    startProgress + 0.005,
+    Math.min(1, range.endMs / win.cycleMs),
+  );
+  return { startProgress, endProgress };
+}
+
+/**
  * Mengembalikan titik progres [0..1] representatif (puncak/akhir segmen) ketika user memilih suatu tahap.
  */
 export function getAnchorProgressForStage(
@@ -235,7 +253,14 @@ export function getAnchorProgressForStage(
 ): number {
   const win = getBeatStageWindows(params, heartRateBpm);
   const range = win.stageWindows[stageId];
-  const targetMs = range.startMs + (range.endMs - range.startMs) * 0.68;
+  const anchorRatioByStage: Record<StageId, number> = {
+    1: 0.72,
+    2: 0.78,
+    3: 0.74,
+    4: 0.7,
+  };
+  const targetMs =
+    range.startMs + (range.endMs - range.startMs) * anchorRatioByStage[stageId];
   return targetMs / win.cycleMs;
 }
 

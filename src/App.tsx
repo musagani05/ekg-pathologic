@@ -6,8 +6,8 @@ import { SingleLeadViewer } from './components/SingleLeadViewer';
 import type { EcgCondition, LeadId, StageId } from './data/ecgConditions';
 import { ECG_DOMAINS, STAGE_IDS } from './data/ecgConditions';
 import {
-  getAnchorProgressForStage,
   getStageAtCycleProgress,
+  getStageProgressRange,
 } from './utils/ecgWaveform';
 
 type SpeedMode = 'real' | 'slow';
@@ -31,26 +31,44 @@ function App() {
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [speedMode, setSpeedMode] = useState<SpeedMode>('slow');
   const [cycleProgress, setCycleProgress] = useState<number>(0.12);
-  const [lockedStage, setLockedStage] = useState<StageId | null>(null);
+  const [loopStage, setLoopStage] = useState<StageId | null>(null);
 
   const currentLeadParams = activeCondition
     ? activeCondition.leads[selectedLead].params
     : null;
 
-  // Durasi 1 siklus: "1x (Real)" (~0.8 detik pada 75 bpm) atau "Lambat (10s)" (10 detik per siklus)
+  // Durasi 1 siklus: "1x (Real)" (~0.8 detik pada 75 bpm) atau "Lambat (20s)" (20 detik per siklus)
   const cycleDurationSeconds =
-    activeCondition && speedMode === 'real' ? 60 / activeCondition.heartRateBpm : 10;
+    activeCondition && speedMode === 'real' ? 60 / activeCondition.heartRateBpm : 20;
 
   useEffect(() => {
-    if (!isPlaying || !activeCondition) return;
+    if (!isPlaying || !activeCondition || !currentLeadParams) return;
+
+    const stageRange =
+      loopStage !== null
+        ? getStageProgressRange(
+            currentLeadParams,
+            activeCondition.heartRateBpm,
+            loopStage,
+          )
+        : null;
 
     let rafId = 0;
     let prevTime: number | null = null;
 
     const animate = (now: number) => {
       if (prevTime !== null) {
-        const dtSec = (now - prevTime) / 1000;
-        setCycleProgress((prev) => (prev + dtSec / cycleDurationSeconds) % 1);
+        const dtSec = Math.min(0.1, (now - prevTime) / 1000);
+        const delta = dtSec / cycleDurationSeconds;
+        setCycleProgress((prev) => {
+          if (stageRange) {
+            const span = Math.max(0.005, stageRange.endProgress - stageRange.startProgress);
+            const offset =
+              (((prev - stageRange.startProgress + delta) % span) + span) % span;
+            return stageRange.startProgress + offset;
+          }
+          return (prev + delta) % 1;
+        });
       }
       prevTime = now;
       rafId = window.requestAnimationFrame(animate);
@@ -58,7 +76,7 @@ function App() {
 
     rafId = window.requestAnimationFrame(animate);
     return () => window.cancelAnimationFrame(rafId);
-  }, [isPlaying, cycleDurationSeconds, activeCondition]);
+  }, [isPlaying, cycleDurationSeconds, activeCondition, currentLeadParams, loopStage]);
 
   const computedLiveStage =
     activeCondition && currentLeadParams
@@ -68,14 +86,19 @@ function App() {
           cycleProgress,
         )
       : null;
-  const activeStage: StageId | null = lockedStage ?? computedLiveStage;
+  const activeStage: StageId | null = loopStage ?? computedLiveStage;
 
   const applyCondition = (cond: EcgCondition) => {
     setSelectedDomainId(cond.domainId);
     setActiveConditionId(cond.id);
     setSelectedLead(cond.defaultLead);
-    setLockedStage(null);
-    setCycleProgress(0.12);
+    if (loopStage !== null) {
+      const nextParams = cond.leads[cond.defaultLead].params;
+      const range = getStageProgressRange(nextParams, cond.heartRateBpm, loopStage);
+      setCycleProgress(range.startProgress);
+    } else {
+      setCycleProgress(0.12);
+    }
     setIsPlaying(true);
   };
 
@@ -88,7 +111,7 @@ function App() {
       applyCondition(nextDomain.conditions[0]);
     } else {
       setActiveConditionId('');
-      setLockedStage(null);
+      setLoopStage(null);
       setIsPlaying(false);
     }
   };
@@ -101,26 +124,26 @@ function App() {
 
   const handleSelectStage = (stageId: StageId) => {
     if (!activeCondition || !currentLeadParams) return;
-    setIsPlaying(false);
-    setLockedStage(stageId);
-    setCycleProgress(
-      getAnchorProgressForStage(currentLeadParams, activeCondition.heartRateBpm, stageId),
+    const range = getStageProgressRange(
+      currentLeadParams,
+      activeCondition.heartRateBpm,
+      stageId,
     );
+    setLoopStage(stageId);
+    setCycleProgress(range.startProgress);
+    setIsPlaying(true);
   };
 
   const handleSelectAllCycles = () => {
-    setLockedStage(null);
+    if (!activeCondition) return;
+    setLoopStage(null);
+    setCycleProgress(0);
     setIsPlaying(true);
   };
 
   const handleTogglePlay = () => {
     if (!activeCondition) return;
-    if (!isPlaying) {
-      setLockedStage(null);
-      setIsPlaying(true);
-    } else {
-      setIsPlaying(false);
-    }
+    setIsPlaying((prev) => !prev);
   };
 
   const handleStepStage = (direction: -1 | 1) => {
@@ -228,7 +251,7 @@ function App() {
           <div className="stage-pills-bar" role="group" aria-label="Pilih fase siklus jantung">
             <button
               type="button"
-              className={`stage-pill-btn ${lockedStage === null && isPlaying ? 'active-all' : ''}`}
+              className={`stage-pill-btn ${loopStage === null ? 'active-all' : ''}`}
               onClick={handleSelectAllCycles}
             >
               Semua Siklus
@@ -274,9 +297,9 @@ function App() {
               type="button"
               className={`speed-option-btn ${speedMode === 'slow' ? 'selected' : ''}`}
               onClick={() => setSpeedMode('slow')}
-              title="Mode belajar: 1 siklus penuh selama 10 detik"
+              title="Mode belajar: 1 siklus penuh selama 20 detik"
             >
-              Lambat (10s)
+              Lambat (20s)
             </button>
           </div>
         </section>
@@ -289,6 +312,8 @@ function App() {
             <div className="top-visual-grid">
               <HeartConductionDiagram
                 condition={activeCondition}
+                leadParams={currentLeadParams!}
+                cycleProgress={cycleProgress}
                 activeStage={activeStage}
                 onSelectStage={handleSelectStage}
               />

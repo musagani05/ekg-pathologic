@@ -330,22 +330,6 @@
   fill: #0f172a;
 }
 
-@keyframes saPulseAnim {
-  0% {
-    transform: scale(0.92);
-    opacity: 0.9;
-  }
-  100% {
-    transform: scale(1.28);
-    opacity: 0.2;
-  }
-}
-
-.sa-pulse-circle {
-  transform-origin: 212px 112px;
-  animation: saPulseAnim 1.4s ease-out infinite alternate;
-}
-
 /* RIGHT VISUAL: SINGLE LARGE LEAD VIEWER + LEAD POSITION TOGGLE */
 .ecg-card-actions {
   display: flex;
