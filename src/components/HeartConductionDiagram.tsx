@@ -367,21 +367,24 @@ export function HeartConductionDiagram({
                 fill={
                   ventricleActive
                     ? ventFill
-                    : condition.hypertrophyZone === 'left-ventricle'
+                    : condition.hypertrophyZone === 'left-ventricle' ||
+                        condition.hypertrophyZone === 'right-ventricle'
                       ? 'rgba(220, 38, 38, 0.09)'
                       : ventFill
                 }
                 stroke={
                   ventricleActive
                     ? ventStroke
-                    : condition.hypertrophyZone === 'left-ventricle'
+                    : condition.hypertrophyZone === 'left-ventricle' ||
+                        condition.hypertrophyZone === 'right-ventricle'
                       ? '#ef4444'
                       : ventStroke
                 }
                 strokeWidth={
                   ventricleActive
                     ? 2.6
-                    : condition.hypertrophyZone === 'left-ventricle'
+                    : condition.hypertrophyZone === 'left-ventricle' ||
+                        condition.hypertrophyZone === 'right-ventricle'
                       ? 2.2
                       : 1.8
                 }
@@ -577,6 +580,18 @@ export function HeartConductionDiagram({
                 pointerEvents="none"
               />
             )}
+            {condition.hypertrophyZone === 'right-ventricle' && (
+              <path
+                d="M 182 200 C 165 256, 186 332, 286 368"
+                fill="none"
+                stroke="#dc2626"
+                strokeWidth="3.6"
+                strokeLinecap="round"
+                strokeDasharray="6 3"
+                opacity="0.85"
+                pointerEvents="none"
+              />
+            )}
             {condition.ischemicZone === 'anterior-lv' && (
               <ellipse
                 cx="340"
@@ -662,6 +677,50 @@ export function HeartConductionDiagram({
                   strokeWidth="1.8"
                   strokeLinecap="round"
                 />
+              </g>
+            )}
+            {condition.blockedTarget === 'left-anterior-fascicle' && (
+              <g pointerEvents="none">
+                <path
+                  d="M 368 202 C 384 232, 388 262, 384 290"
+                  fill="none"
+                  stroke="#dc2626"
+                  strokeWidth="3.2"
+                  strokeLinecap="round"
+                  strokeDasharray="5 3"
+                  opacity="0.82"
+                />
+                <g transform="translate(314, 258)">
+                  <circle cx="0" cy="0" r="6.5" fill="#fef2f2" stroke="#dc2626" strokeWidth="1.7" />
+                  <path
+                    d="M -2.6 -2.6 L 2.6 2.6 M 2.6 -2.6 L -2.6 2.6"
+                    stroke="#dc2626"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                  />
+                </g>
+              </g>
+            )}
+            {condition.blockedTarget === 'left-posterior-fascicle' && (
+              <g pointerEvents="none">
+                <path
+                  d="M 184 202 C 168 256, 188 330, 286 366"
+                  fill="none"
+                  stroke="#dc2626"
+                  strokeWidth="3.2"
+                  strokeLinecap="round"
+                  strokeDasharray="5 3"
+                  opacity="0.82"
+                />
+                <g transform="translate(280, 294)">
+                  <circle cx="0" cy="0" r="6.5" fill="#fef2f2" stroke="#dc2626" strokeWidth="1.7" />
+                  <path
+                    d="M -2.6 -2.6 L 2.6 2.6 M 2.6 -2.6 L -2.6 2.6"
+                    stroke="#dc2626"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                  />
+                </g>
               </g>
             )}
 

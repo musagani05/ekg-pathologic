@@ -33,11 +33,21 @@ export type ConductionPartId =
   | 'right-ventricle'
   | 'left-ventricle';
 
-export type BlockedConductionTarget = 'av-node' | 'av-reentry' | 'rbb' | 'lbb';
+export type BlockedConductionTarget =
+  | 'av-node'
+  | 'av-reentry'
+  | 'rbb'
+  | 'lbb'
+  | 'left-anterior-fascicle'
+  | 'left-posterior-fascicle';
 
 export type IschemicZoneTarget = 'anterior-lv' | 'inferior' | 'subendocardial-lv';
 
-export type HypertrophyZoneTarget = 'right-atrium' | 'left-atrium' | 'left-ventricle';
+export type HypertrophyZoneTarget =
+  | 'right-atrium'
+  | 'left-atrium'
+  | 'left-ventricle'
+  | 'right-ventricle';
 
 export interface LeadWaveParams {
   pAmpMv: number;
@@ -1092,6 +1102,507 @@ const LVH_CONDITION: EcgCondition = {
   ),
 };
 
+const RVH_CONDITION: EcgCondition = {
+  id: 'rvh',
+  domainId: 'kelainan-aksis-ruang',
+  domainName: 'Kelainan Aksis & Pembesaran Ruang Jantung',
+  name: 'Hipertrofi Ventrikel Kanan (RVH)',
+  noteReferencePath: 'src/notes/1.4 RVH.md',
+  heartRateBpm: 75,
+  defaultLead: 'V1',
+  hypertrophyZone: 'right-ventricle',
+  stages: {
+    1: {
+      ...NORMAL_SINUS_CONDITION.stages[1],
+      heartStatusCaption:
+        'Atrium kanan sering ikut terbebani secara retrograd sehingga menghasilkan defleksi awal lebih kuat.',
+      whatHappensInHeart:
+        'SA Node memicu depolarisasi atrium; bila tekanan tinggi ventrikel kanan menular ke atrium kanan, massa atrium kanan yang membesar menghasilkan voltase awal lebih besar.',
+      whyEcgLooksLikeThis:
+        'Gelombang P dapat tampak normal atau menunjukkan gambaran P pulmonale (defleksi positif lebih menonjol di V1 dan tinggi lancip ≥ 2,5 mm di Lead II).',
+    },
+    2: {
+      ...NORMAL_SINUS_CONDITION.stages[2],
+      heartStatusCaption:
+        'Impuls melewati AV Node dan berkas His dengan perlambatan fisiologis normal.',
+      whatHappensInHeart:
+        'Konduksi listrik melalui AV junction menuju percabangan berkas berjalan normal tanpa hambatan tambahan.',
+      whyEcgLooksLikeThis:
+        'Segmen PR tetap mendatar isoelektrik dengan interval PR normal (0,12–0,20 detik).',
+    },
+    3: {
+      ...NORMAL_SINUS_CONDITION.stages[3],
+      vectors: [
+        {
+          id: 'vec-rvh-dominant',
+          label: 'Vektor RV Dominan (Anterior-Kanan-Inferior)',
+          x1: 274,
+          y1: 244,
+          x2: 204,
+          y2: 302,
+          color: '#dc2626',
+        },
+      ],
+      heartStatusCaption:
+        'Dinding ventrikel kanan yang menebal membelokkan vektor depolarisasi utama ke arah anterior dan kanan.',
+      whatHappensInHeart:
+        'Massa miokardium ventrikel kanan yang hipertrofi menghasilkan gaya listrik masif yang mengimbangi lalu melampaui ventrikel kiri, menarik resultan vektor ke kanan, depan, dan bawah.',
+      whyEcgLooksLikeThis:
+        'Di Lead V1 terbentuk gelombang R tinggi abnormal (rasio R/S ≥ 1 atau R ≥ 7 mm) menggantikan S dalam normal, disertai deviasi aksis ke kanan (RAD) dan gelombang S dalam persisten di V5–V6/I.',
+    },
+    4: {
+      ...NORMAL_SINUS_CONDITION.stages[4],
+      accentColor: '#d97706',
+      softBg: '#fffbeb',
+      heartStatusCaption:
+        'Beban tekanan sistolik membalik arah pemulihan listrik pada ventrikel kanan (RV Strain).',
+      whatHappensInHeart:
+        'Tekanan tinggi dan hipertrofi miosit ventrikel kanan memicu repolarisasi abnormal berjalan dari lapisan dalam (endokardium) ke lapisan luar (epikardium).',
+      whyEcgLooksLikeThis:
+        'Muncul diskordansi repolarisasi sekunder di V1–V3 (dan lead inferior) berupa depresi segmen ST landai ke bawah serta inversi gelombang T asimetris (pola RV strain).',
+    },
+  },
+  leads: buildDerivedLeads(
+    {
+      I: {
+        params: { rAmpMv: 0.28, sAmpMv: -0.62 },
+        stageNotes: {
+          3: 'Gelombang S lebih dalam daripada R (rasio R/S < 1) menandakan deviasi aksis ke kanan (RAD).',
+        },
+      },
+      II: {
+        params: {
+          pAmpMv: 0.27,
+          pDurationMs: 100,
+          pSharpness: 'peaked',
+          rAmpMv: 1.02,
+          sAmpMv: -0.12,
+          stDeviationMv: -0.08,
+          stMorphology: 'downsloping',
+          tAmpMv: -0.14,
+        },
+        stageNotes: {
+          1: 'Gelombang P meninggi lancip (+0,27 mV ≥ 2,5 mm) bila disertai pembesaran atrium kanan.',
+          4: 'Depresi ST ringan dan inversi T dapat muncul di lead inferior sebagai perluasan RV strain.',
+        },
+      },
+      III: {
+        params: {
+          pAmpMv: 0.22,
+          pDurationMs: 98,
+          pSharpness: 'peaked',
+          rAmpMv: 1.18,
+          sAmpMv: 0,
+          stDeviationMv: -0.1,
+          stMorphology: 'downsloping',
+          tAmpMv: -0.16,
+        },
+        stageNotes: {
+          3: 'Gelombang R tinggi dominan (+1,18 mV) di Lead III sesuai pergeseran aksis ke kanan (RAD).',
+        },
+      },
+      aVR: {
+        params: {
+          pAmpMv: -0.2,
+          pDurationMs: 98,
+          pSharpness: 'peaked',
+          qAmpMv: -0.34,
+          rAmpMv: 0.36,
+          sAmpMv: -0.22,
+        },
+      },
+      aVL: {
+        params: { rAmpMv: 0.14, sAmpMv: -0.58 },
+      },
+      aVF: {
+        params: {
+          pAmpMv: 0.24,
+          pDurationMs: 98,
+          pSharpness: 'peaked',
+          rAmpMv: 1.12,
+          sAmpMv: -0.06,
+          stDeviationMv: -0.09,
+          stMorphology: 'downsloping',
+          tAmpMv: -0.15,
+        },
+      },
+      V1: {
+        params: {
+          pAmpMv: 0.18,
+          pTerminalAmpMv: -0.05,
+          pInitialRatio: 0.54,
+          pDurationMs: 100,
+          pSharpness: 'peaked',
+          qAmpMv: 0,
+          rAmpMv: 1.08,
+          rDurationMs: 52,
+          sAmpMv: -0.22,
+          sDurationMs: 28,
+          stDeviationMv: -0.14,
+          stMorphology: 'downsloping',
+          tAmpMv: -0.26,
+        },
+        stageNotes: {
+          1: 'Defleksi positif awal P di V1 menonjol (+0,18 mV) mencerminkan beban atrium kanan penyerta.',
+          3: 'Pembalikan rasio V1: gelombang R tinggi (+1,08 mV ≥ 7 mm; rasio R/S > 1) menggantikan pola rS normal akibat dominasi vektor RV ke anterior-kanan.',
+          4: 'Pola RV strain klasik di V1: depresi segmen ST landai ke bawah dan inversi gelombang T asimetris.',
+        },
+      },
+      V2: {
+        params: {
+          pAmpMv: 0.15,
+          pDurationMs: 98,
+          pSharpness: 'peaked',
+          rAmpMv: 0.96,
+          rDurationMs: 48,
+          sAmpMv: -0.42,
+          sDurationMs: 36,
+          stDeviationMv: -0.12,
+          stMorphology: 'downsloping',
+          tAmpMv: -0.24,
+        },
+        stageNotes: {
+          3: 'Gelombang R tetap dominan tinggi (R > S) di prekordial kanan V2.',
+          4: 'Depresi ST landai dan inversi gelombang T asimetris (RV strain).',
+        },
+      },
+      V3: {
+        params: {
+          rAmpMv: 0.76,
+          sAmpMv: -0.78,
+          stDeviationMv: -0.08,
+          stMorphology: 'downsloping',
+          tAmpMv: -0.18,
+        },
+      },
+      V4: {
+        params: { rAmpMv: 0.78, sAmpMv: -0.76 },
+      },
+      V5: {
+        params: { rAmpMv: 0.62, sAmpMv: -0.74 },
+        stageNotes: {
+          3: 'Gelombang S tetap dalam dan persisten di lead lateral (hilangnya progresi R normal).',
+        },
+      },
+      V6: {
+        params: { qAmpMv: -0.04, rAmpMv: 0.54, sAmpMv: -0.68 },
+        stageNotes: {
+          3: 'Rasio S/R > 1 di V6 (−0,68 vs +0,54 mV) karena gaya ventrikel kanan menarik vektor menjauhi sisi kiri.',
+        },
+      },
+    },
+    { qrsDurationMs: 92 },
+  ),
+};
+
+const LAD_CONDITION: EcgCondition = {
+  id: 'lad',
+  domainId: 'kelainan-aksis-ruang',
+  domainName: 'Kelainan Aksis & Pembesaran Ruang Jantung',
+  name: 'Left Axis Deviation (LAD)',
+  noteReferencePath: 'src/notes/1.5 LAD.md',
+  heartRateBpm: 75,
+  defaultLead: 'I',
+  blockedTarget: 'left-anterior-fascicle',
+  stages: {
+    1: {
+      ...NORMAL_SINUS_CONDITION.stages[1],
+      heartStatusCaption:
+        'SA Node memicu impuls yang menyebar normal melintasi atrium kanan dan kiri.',
+      whatHappensInHeart:
+        'Depolarisasi atrium berjalan normal dari nodus SA ke arah inferior-anterior melintasi kedua atrium tanpa gangguan.',
+      whyEcgLooksLikeThis:
+        'Terbentuk gelombang P positif halus yang normal di Lead I, II, dan aVF dengan durasi dan amplitudo fisiologis.',
+    },
+    2: {
+      ...NORMAL_SINUS_CONDITION.stages[2],
+      heartStatusCaption:
+        'Impuls melewati AV Node dan berkas His dengan perlambatan fisiologis normal.',
+      whatHappensInHeart:
+        'Impuls listrik mengalami jeda normal di AV junction sebelum memasuki sistem trifasikular ventrikel.',
+      whyEcgLooksLikeThis:
+        'Tidak ada gradien potensial di permukaan tubuh sehingga segmen PR tampak datar isoelektrik (interval PR 0,12–0,20 detik).',
+    },
+    3: {
+      ...NORMAL_SINUS_CONDITION.stages[3],
+      vectors: [
+        {
+          id: 'vec-lad-initial',
+          label: '1. Awal ke Inferior (Fasikel Posterior)',
+          x1: 280,
+          y1: 246,
+          x2: 298,
+          y2: 296,
+          color: '#ea580c',
+          dashed: true,
+        },
+        {
+          id: 'vec-lad-superior',
+          label: '2. Resultan Utama ke Kiri-Atas (−30° s/d −90°)',
+          x1: 282,
+          y1: 266,
+          x2: 360,
+          y2: 214,
+          color: '#dc2626',
+        },
+      ],
+      heartStatusCaption:
+        'Aktivasi awal turun lewat fasikel posterior, lalu resultan gaya listrik tertarik kuat ke kiri-atas (superior).',
+      whatHappensInHeart:
+        'Ventrikel awalnya teraktivasi ke inferior melalui fasikel posterior, lalu dinding superior-anterolateral ventrikel kiri mendominasi (atau teraktivasi belakangan akibat hambatan fasikel anterior) sehingga vektor rata-rata berotasi ke kiri-atas (−30° hingga −90°).',
+      whyEcgLooksLikeThis:
+        'Di Lead I (0°) dan aVL (−30°), arus yang mendekat sejajar menghasilkan gelombang R tinggi (pola qR sempit); sebaliknya di Lead II, III, dan aVF arus menjauh ke atas membentuk pola rS dengan S lebih dalam daripada r (S > r).',
+    },
+    4: {
+      ...NORMAL_SINUS_CONDITION.stages[4],
+      heartStatusCaption:
+        'Fase plateau (ST) dan repolarisasi ventrikel (Gel. T) berlangsung normal pada LAD terisolasi.',
+      whatHappensInHeart:
+        'Miokardium ventrikel menyelesaikan fase plateau secara seragam lalu berepolarisasi normal dari epikardium ke endokardium.',
+      whyEcgLooksLikeThis:
+        'Segmen ST kembali datar pada garis isoelektrik, diikuti gelombang T positif halus yang konkordan dengan gelombang R di Lead I.',
+    },
+  },
+  leads: buildDerivedLeads(
+    {
+      I: {
+        params: {
+          qAmpMv: -0.08,
+          qDurationMs: 18,
+          rAmpMv: 1.24,
+          rDurationMs: 46,
+          sAmpMv: 0,
+          tAmpMv: 0.28,
+        },
+        stageNotes: {
+          1: 'Gelombang P positif halus normal di Lead I.',
+          3: 'Pola qR sempit dengan gelombang R dominan tinggi (+1,24 mV) karena vektor utama berotasi ke kiri-atas sejajar Lead I (0°).',
+          4: 'Segmen ST isoelektrik dan gelombang T positif konkordan pada LAD terisolasi.',
+        },
+      },
+      II: {
+        params: {
+          qAmpMv: 0,
+          rAmpMv: 0.24,
+          rDurationMs: 22,
+          sAmpMv: -0.82,
+          sDurationMs: 56,
+        },
+        stageNotes: {
+          3: 'Pola rS klasik di Lead II (S −0,82 mV jauh lebih dalam daripada r +0,24 mV) menandakan aksis bergeser ke ≤ −30°.',
+        },
+      },
+      III: {
+        params: {
+          qAmpMv: 0,
+          rAmpMv: 0.14,
+          rDurationMs: 18,
+          sAmpMv: -1.16,
+          sDurationMs: 60,
+        },
+        stageNotes: {
+          3: 'Gelombang S sangat dalam (−1,16 mV) di Lead III karena vektor ventrikel bergerak menjauhi kuadran inferior kanan.',
+        },
+      },
+      aVR: {
+        params: {
+          qAmpMv: 0,
+          rAmpMv: 0.22,
+          rDurationMs: 24,
+          sAmpMv: -0.78,
+          sDurationMs: 52,
+        },
+      },
+      aVL: {
+        params: {
+          qAmpMv: -0.09,
+          qDurationMs: 18,
+          rAmpMv: 1.18,
+          rDurationMs: 46,
+          sAmpMv: 0,
+          tAmpMv: 0.26,
+        },
+        stageNotes: {
+          3: 'Gelombang R tinggi (+1,18 mV, pola qR) di aVL (−30°) karena vektor superior-kiri mengarah langsung ke elektroda ini.',
+        },
+      },
+      aVF: {
+        params: {
+          qAmpMv: 0,
+          rAmpMv: 0.18,
+          rDurationMs: 20,
+          sAmpMv: -0.96,
+          sDurationMs: 58,
+        },
+        stageNotes: {
+          3: 'Pola rS dominan negatif (−0,96 mV) di aVF (+90°) mengonfirmasi deviasi aksis ke atas (LAD).',
+        },
+      },
+      V5: {
+        params: { sAmpMv: -0.22, sDurationMs: 26 },
+      },
+      V6: {
+        params: { sAmpMv: -0.2, sDurationMs: 24 },
+      },
+    },
+    { qrsDurationMs: 92 },
+  ),
+};
+
+const RAD_CONDITION: EcgCondition = {
+  id: 'rad',
+  domainId: 'kelainan-aksis-ruang',
+  domainName: 'Kelainan Aksis & Pembesaran Ruang Jantung',
+  name: 'Right Axis Deviation (RAD)',
+  noteReferencePath: 'src/notes/1.6 RAD.md',
+  heartRateBpm: 75,
+  defaultLead: 'I',
+  blockedTarget: 'left-posterior-fascicle',
+  stages: {
+    1: {
+      ...NORMAL_SINUS_CONDITION.stages[1],
+      heartStatusCaption:
+        'SA Node memicu impuls yang menyebar normal melintasi atrium kanan dan kiri.',
+      whatHappensInHeart:
+        'Depolarisasi atrium berjalan normal dari SA Node ke arah inferior-anterior melintasi dinding kedua atrium.',
+      whyEcgLooksLikeThis:
+        'Di Lead I (0°), depolarisasi atrium menghasilkan gelombang P positif kecil yang normal dengan interval PR fisiologis.',
+    },
+    2: {
+      ...NORMAL_SINUS_CONDITION.stages[2],
+      heartStatusCaption:
+        'Impuls melewati AV Node dan berkas His dengan perlambatan fisiologis normal.',
+      whatHappensInHeart:
+        'Gelombang listrik melalui AV junction dan berkas His dengan jeda fisiologis normal sebelum menuju cabang ventrikel.',
+      whyEcgLooksLikeThis:
+        'Tidak ada perbedaan voltase netto di permukaan tubuh sehingga tercatat garis datar isoelektrik pada segmen PR.',
+    },
+    3: {
+      ...NORMAL_SINUS_CONDITION.stages[3],
+      vectors: [
+        {
+          id: 'vec-rad-initial',
+          label: '1. Awal ke Kiri-Atas (Fasikel Anterior)',
+          x1: 280,
+          y1: 244,
+          x2: 332,
+          y2: 228,
+          color: '#ea580c',
+          dashed: true,
+        },
+        {
+          id: 'vec-rad-main',
+          label: '2. Resultan Utama ke Kanan-Bawah (+100° s/d +120°)',
+          x1: 274,
+          y1: 250,
+          x2: 214,
+          y2: 326,
+          color: '#dc2626',
+        },
+      ],
+      heartStatusCaption:
+        'Aktivasi awal mengarah ke kiri-atas lalu resultan gaya listrik tertarik ke kanan dan inferior (+100° s/d +120°).',
+      whatHappensInHeart:
+        'Impuls awal menyebar ke superior-kiri via fasikel anterior, lalu disusul depolarisasi dominan ventrikel kanan atau dinding inferior-posterior yang menarik resultan vektor ke kanan dan bawah.',
+      whyEcgLooksLikeThis:
+        'Di Lead I (0°) dan aVL, arus yang menjauh ke kanan membentuk pola rS dengan S jauh lebih dalam daripada r (S > r); di Lead III (+120°) dan aVF, arus mengarah langsung membentuk gelombang R tinggi dengan R III > R II.',
+    },
+    4: {
+      ...NORMAL_SINUS_CONDITION.stages[4],
+      heartStatusCaption:
+        'Fase plateau (ST) dan repolarisasi ventrikel (Gel. T) berlangsung normal pada RAD terisolasi.',
+      whatHappensInHeart:
+        'Seluruh miokardium ventrikel menyelesaikan fase depolarisasi penuh lalu menjalani repolarisasi fisiologis normal.',
+      whyEcgLooksLikeThis:
+        'Segmen ST datar di garis isoelektrik diikuti gelombang T tegak di lead inferior, sementara di Lead I gelombang T mendatar atau positif rendah.',
+    },
+  },
+  leads: buildDerivedLeads(
+    {
+      I: {
+        params: {
+          qAmpMv: 0,
+          rAmpMv: 0.24,
+          rDurationMs: 22,
+          sAmpMv: -0.92,
+          sDurationMs: 56,
+          tAmpMv: 0.08,
+        },
+        stageNotes: {
+          1: 'Gelombang P positif kecil yang normal di Lead I.',
+          3: 'Pembalikan defleksi Lead I: r kecil (+0,24 mV) diikuti gelombang S dalam (−0,92 mV, pola rS dengan S > r) akibat vektor bergeser ke kanan.',
+          4: 'Segmen ST isoelektrik dan gelombang T positif rendah/datar pada RAD terisolasi.',
+        },
+      },
+      II: {
+        params: {
+          qAmpMv: -0.04,
+          rAmpMv: 0.98,
+          rDurationMs: 46,
+          sAmpMv: -0.08,
+          tAmpMv: 0.24,
+        },
+        stageNotes: {
+          3: 'Gelombang R positif tegas (+0,98 mV) di Lead II, namun tingginya masih di bawah gelombang R di Lead III.',
+        },
+      },
+      III: {
+        params: {
+          qAmpMv: -0.08,
+          qDurationMs: 18,
+          rAmpMv: 1.38,
+          rDurationMs: 48,
+          sAmpMv: 0,
+          tAmpMv: 0.26,
+        },
+        stageNotes: {
+          3: 'Ciri khas RAD: gelombang R di Lead III (+1,38 mV) menjulang lebih tinggi daripada Lead II (R III > R II).',
+        },
+      },
+      aVR: {
+        params: {
+          qAmpMv: -0.32,
+          rAmpMv: 0.36,
+          sAmpMv: -0.24,
+        },
+      },
+      aVL: {
+        params: {
+          qAmpMv: 0,
+          rAmpMv: 0.16,
+          rDurationMs: 18,
+          sAmpMv: -1.04,
+          sDurationMs: 58,
+          tAmpMv: 0.06,
+        },
+        stageNotes: {
+          3: 'Pola rS dominan negatif (−1,04 mV) di aVL karena vektor menjauh dari bahu kiri.',
+        },
+      },
+      aVF: {
+        params: {
+          qAmpMv: -0.06,
+          qDurationMs: 16,
+          rAmpMv: 1.18,
+          rDurationMs: 46,
+          sAmpMv: 0,
+          tAmpMv: 0.24,
+        },
+        stageNotes: {
+          3: 'Gelombang R tinggi (+1,18 mV) di aVF mengonfirmasi aksis mengarah kuat ke inferior-kanan.',
+        },
+      },
+      V5: {
+        params: { sAmpMv: -0.26, sDurationMs: 28 },
+      },
+      V6: {
+        params: { sAmpMv: -0.3, sDurationMs: 30 },
+      },
+    },
+    { qrsDurationMs: 92 },
+  ),
+};
+
 export const ECG_DOMAINS: EcgDomain[] = [
   {
     id: 'fisiologi-normal',
@@ -1101,7 +1612,14 @@ export const ECG_DOMAINS: EcgDomain[] = [
   {
     id: 'kelainan-aksis-ruang',
     name: 'Kelainan Aksis & Pembesaran Ruang Jantung',
-    conditions: [P_PULMONALE_CONDITION, P_MITRALE_CONDITION, LVH_CONDITION],
+    conditions: [
+      P_PULMONALE_CONDITION,
+      P_MITRALE_CONDITION,
+      LVH_CONDITION,
+      RVH_CONDITION,
+      LAD_CONDITION,
+      RAD_CONDITION,
+    ],
   },
   {
     id: 'konduksi-intraventrikel',

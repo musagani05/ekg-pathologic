@@ -352,6 +352,12 @@ function App() {
             <em>Marriott&apos;s Practical Electrocardiography</em> •{' '}
             <em>Goldberger&apos;s Clinical Electrocardiography</em>
           </p>
+          <p className="footer-references-line">
+            Kritik dan saran dapat dikirimkan ke email{' '}
+            <a href="mailto:musaganirahman@mail.ugm.ac.id" style={{ color: 'inherit' }}>
+              musaganirahman@mail.ugm.ac.id
+            </a>
+          </p>
         </div>
       </footer>
     </div>
