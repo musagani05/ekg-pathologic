@@ -3762,6 +3762,1742 @@ export const THIRD_DEGREE_AV_BLOCK_CONDITION: EcgCondition = {
   ),
 };
 
+export const PAC_CONDITION: EcgCondition = {
+  id: 'pac',
+  domainId: 'takiaritmia',
+  domainName: 'Takiaritmia',
+  name: 'Premature Atrial Contraction (PAC)',
+  noteReferencePath: 'src/notes/5.1 PAC.md',
+  heartRateBpm: 98,
+  defaultLead: 'II',
+  stages: {
+    1: {
+      ...NORMAL_SINUS_CONDITION.stages[1],
+      accentColor: '#d97706',
+      softBg: '#fffbeb',
+      vectors: [
+        {
+          id: 'vec-pac-ectopic',
+          label: 'Vektor P Ektopik Prematur (P\' Berubah Arah)',
+          x1: 320,
+          y1: 158,
+          x2: 236,
+          y2: 112,
+          color: '#d97706',
+        },
+      ],
+      heartStatusCaption:
+        'Fokus ektopik atrium meletup prematur sebelum jadwal SA Node, menghasilkan gelombang P\' abnormal yang lebih dini.',
+      whatHappensInHeart:
+        'Sebuah fokus ektopik di dinding atrium berdepolarisasi spontan lebih awal mendahului Nodus SA, menyebarkan impuls melintasi kedua atrium sekaligus me-reset siklus Nodus SA.',
+      whyEcgLooksLikeThis:
+        'Terbentuk gelombang P prematur (P\') yang datang lebih dini dengan morfologi berbeda dari P sinus normal (dapat terbalik/negatif −0,16 mV di Lead II bila berasal dari atrium inferior, atau menimpa T sebelumnya).',
+    },
+    2: {
+      ...NORMAL_SINUS_CONDITION.stages[2],
+      heartStatusCaption:
+        'Impuls ektopik memasuki AV Node; PR dapat normal, memendek, atau memanjang bila AV Node masih refrakter relatif.',
+      whatHappensInHeart:
+        'Impuls prematur menembus AV junction; apabila Nodus AV belum pulih sempurna (masa refrakter relatif), konduksi melambat secara dekremental (atau terblokir total pada blocked PAC).',
+      whyEcgLooksLikeThis:
+        'Tercatat segmen PR dengan durasi interval PR yang dapat sedikit bergeser (0,14–0,22 dtk) mengikuti waktu kedatangan impuls ektopik di Nodus AV.',
+    },
+    3: {
+      ...NORMAL_SINUS_CONDITION.stages[3],
+      heartStatusCaption:
+        'Impuls yang lolos melintasi AV Node turun simetris lewat His-Purkinje menghasilkan QRS sempit.',
+      whatHappensInHeart:
+        'Begitu melewati persimpangan AV, sinyal listrik meluncur cepat melalui berkas His dan sistem Purkinje mengaktivasi kedua ventrikel secara sinkron.',
+      whyEcgLooksLikeThis:
+        'Di Lead II terekam kompleks QRS berdurasi sempit normal (< 0,10 dtk) dengan kontur identik seperti denyut sinus dasar (kecuali bila terjadi aberasi cabang berkas).',
+    },
+    4: {
+      ...NORMAL_SINUS_CONDITION.stages[4],
+      heartStatusCaption:
+        'Ventrikel berepolarisasi normal lalu diikuti jeda non-kompensatori (< 2 × P-P) akibat reset Nodus SA.',
+      whatHappensInHeart:
+        'Miokardium ventrikel menjalani repolarisasi fisiologis normal, sementara Nodus SA yang telah di-reset memulai persiapan letupan baru dari titik awal.',
+      whyEcgLooksLikeThis:
+        'Segmen ST datar isoelektrik dengan gelombang T normal, diikuti jeda inkomplit (non-kompensatori) sebelum irama sinus reguler kembali berjalan.',
+    },
+  },
+  leads: buildDerivedLeads(
+    {
+      I: { params: { pAmpMv: 0.08 } },
+      II: {
+        params: {
+          pAmpMv: -0.16,
+          pDurationMs: 88,
+          pSharpness: 'peaked',
+          prIntervalMs: 145,
+        },
+        stageNotes: {
+          1: 'Gelombang P ektopik (P\') muncul prematur dengan polaritas terbalik (−0,16 mV) dibanding gelombang P sinus Normal.',
+          2: 'Interval PR denyut ektopik (0,15 dtk) dapat bergeser tergantung tingkat pemulihan AV Node.',
+          3: 'Kompleks QRS tetap sempit normal (0,08 dtk) identik dengan denyut sinus.',
+          4: 'Segmen ST dan gelombang T normal sebelum jeda non-kompensatori.',
+        },
+      },
+      III: { params: { pAmpMv: -0.14 } },
+      aVR: { params: { pAmpMv: 0.14 } },
+      aVL: { params: { pAmpMv: 0.06 } },
+      aVF: { params: { pAmpMv: -0.14 } },
+      V1: { params: { pAmpMv: 0.14, pTerminalAmpMv: 0 } },
+    },
+    { pDurationMs: 88, prIntervalMs: 145, qrsDurationMs: 82, qtIntervalMs: 360 },
+  ),
+};
+
+export const PVC_CONDITION: EcgCondition = {
+  id: 'pvc',
+  domainId: 'takiaritmia',
+  domainName: 'Takiaritmia',
+  name: 'Premature Ventricular Contraction (PVC)',
+  noteReferencePath: 'src/notes/5.2 PVC.md',
+  heartRateBpm: 95,
+  defaultLead: 'II',
+  stages: {
+    1: {
+      ...NORMAL_SINUS_CONDITION.stages[1],
+      activeParts: ['sa-node'],
+      vectors: [],
+      heartStatusCaption:
+        'PVC tidak didahului gelombang P ektopik; SA Node tetap berdenyut sesuai jadwal (P sinus sering tertanam di QRS).',
+      whatHappensInHeart:
+        'Fokus ektopik di miokardium ventrikel meletup prematur sebelum impuls atrium tiba, sementara Nodus SA tetap melepaskan impuls sinusnya secara mandiri.',
+      whyEcgLooksLikeThis:
+        'Tidak tampak gelombang P mendahului kompleks PVC di Lead II karena P sinus yang berdetak sesuai jadwal sering tertanam (buried) di dalam QRS/T prematur.',
+    },
+    2: {
+      ...NORMAL_SINUS_CONDITION.stages[2],
+      activeParts: ['av-node'],
+      vectors: [],
+      heartStatusCaption:
+        'Tidak ada konduksi anterograd melewati AV Node sebelum PVC; segmen PR tidak terbentuk.',
+      whatHappensInHeart:
+        'Impuls ektopik berasal langsung dari ventrikel tanpa melewati Nodus AV secara anterograd; refrakteritas Nodus AV umumnya juga menahan penjalaran balik agar tidak me-reset Nodus SA.',
+      whyEcgLooksLikeThis:
+        'Garis segmen PR sebelum kompleks PVC menghilang sehingga tidak ada interval PR yang dapat diukur.',
+    },
+    3: {
+      ...NORMAL_SINUS_CONDITION.stages[3],
+      accentColor: '#dc2626',
+      softBg: '#fef2f2',
+      activeParts: ['right-ventricle', 'left-ventricle'],
+      vectors: [
+        {
+          id: 'vec-pvc-ectopic',
+          label: 'Sebaran Ektopik Ventrikel Asinkron (Miosit-ke-Miosit)',
+          x1: 212,
+          y1: 284,
+          x2: 356,
+          y2: 266,
+          color: '#dc2626',
+        },
+      ],
+      heartStatusCaption:
+        'Impuls ektopik menyebar lambat miosit-ke-miosit di luar His-Purkinje menghasilkan QRS lebar bizar (≥ 0,12 dtk).',
+      whatHappensInHeart:
+        'Aktivasi dimulai dari fokus ektopik dinding ventrikel, merambat lambat antarsel menembus miokardium dan menyeberangi septum untuk mendepolarisasi ventrikel kontralateral secara asinkron.',
+      whyEcgLooksLikeThis:
+        'Di Lead II terekam kompleks QRS prematur yang melebar (0,15 dtk; ≥ 0,12 dtk) dengan bentuk bizar bertakik dan amplitudo tinggi (+1,56 mV).',
+    },
+    4: {
+      ...NORMAL_SINUS_CONDITION.stages[4],
+      accentColor: '#d97706',
+      softBg: '#fffbeb',
+      vectors: [
+        {
+          id: 'vec-pvc-discordant',
+          label: 'Repolarisasi Sekunder Diskordan (Berlawanan QRS)',
+          x1: 344,
+          y1: 274,
+          x2: 236,
+          y2: 294,
+          color: '#d97706',
+        },
+      ],
+      heartStatusCaption:
+        'ST-T berlawanan arah dengan QRS (diskordan) dan diikuti jeda kompensatori penuh (2 × P-P).',
+      whatHappensInHeart:
+        'Depolarisasi asinkron membalik urutan pemulihan listrik miokard ventrikel, sementara Nodus SA yang tidak terganggu melanjutkan ritmenya pada siklus sinus berikutnya.',
+      whyEcgLooksLikeThis:
+        'Segmen ST mengalami depresi (−0,18 mV) dan gelombang T terbalik (−0,44 mV) berlawanan arah dengan QRS positif, disusul jeda kompensatori penuh pada strip kontinu.',
+    },
+  },
+  leads: buildDerivedLeads(
+    {
+      I: {
+        params: {
+          pAmpMv: 0,
+          qAmpMv: 0,
+          rAmpMv: 1.18,
+          rDurationMs: 118,
+          rNotched: true,
+          sAmpMv: 0,
+          stDeviationMv: -0.14,
+          stMorphology: 'downsloping',
+          tAmpMv: -0.34,
+        },
+      },
+      II: {
+        params: {
+          pAmpMv: 0,
+          qAmpMv: 0,
+          rAmpMv: 1.56,
+          rDurationMs: 126,
+          rNotched: true,
+          sAmpMv: -0.24,
+          sDurationMs: 26,
+          stDeviationMv: -0.18,
+          stMorphology: 'downsloping',
+          tAmpMv: -0.44,
+          tDurationMs: 180,
+        },
+        stageNotes: {
+          1: 'Tidak ada gelombang P ektopik sebelum PVC (P sinus sering tertanam di dalam QRS).',
+          2: 'Tidak terbentuk segmen PR sebelum kompleks ventrikel prematur.',
+          3: 'Kompleks QRS melebar bizar (+1,56 mV; 0,15 dtk) bertakik akibat rambatan lambat miosit-ke-miosit.',
+          4: 'Diskordansi sekunder: depresi ST (−0,18 mV) dan inversi T (−0,44 mV) berlawanan arah dengan QRS dominan.',
+        },
+      },
+      III: {
+        params: {
+          pAmpMv: 0,
+          qAmpMv: 0,
+          rAmpMv: 0.85,
+          rDurationMs: 112,
+          rNotched: true,
+          sAmpMv: -0.2,
+          stDeviationMv: -0.1,
+          tAmpMv: -0.26,
+        },
+      },
+      aVR: {
+        params: {
+          pAmpMv: 0,
+          qAmpMv: 0,
+          rAmpMv: 0.1,
+          sAmpMv: -1.35,
+          sDurationMs: 132,
+          stDeviationMv: 0.16,
+          tAmpMv: 0.36,
+        },
+      },
+      aVL: {
+        params: {
+          pAmpMv: 0,
+          qAmpMv: 0,
+          rAmpMv: 0.65,
+          rDurationMs: 96,
+          rNotched: true,
+          sAmpMv: -0.2,
+          stDeviationMv: -0.08,
+          tAmpMv: -0.18,
+        },
+      },
+      aVF: {
+        params: {
+          pAmpMv: 0,
+          qAmpMv: 0,
+          rAmpMv: 1.24,
+          rDurationMs: 120,
+          rNotched: true,
+          sAmpMv: -0.22,
+          stDeviationMv: -0.14,
+          tAmpMv: -0.34,
+        },
+      },
+      V1: {
+        params: {
+          pAmpMv: 0,
+          pTerminalAmpMv: 0,
+          qAmpMv: 0,
+          rAmpMv: 0,
+          sAmpMv: -1.62,
+          sDurationMs: 146,
+          stDeviationMv: 0.22,
+          stMorphology: 'concave',
+          tAmpMv: 0.42,
+        },
+      },
+      V2: {
+        params: {
+          pAmpMv: 0,
+          qAmpMv: 0,
+          rAmpMv: 0.12,
+          sAmpMv: -1.48,
+          sDurationMs: 136,
+          stDeviationMv: 0.18,
+          tAmpMv: 0.36,
+        },
+      },
+      V5: {
+        params: {
+          pAmpMv: 0,
+          qAmpMv: 0,
+          rAmpMv: 1.38,
+          rDurationMs: 124,
+          rNotched: true,
+          sAmpMv: 0,
+          stDeviationMv: -0.14,
+          tAmpMv: -0.32,
+        },
+      },
+      V6: {
+        params: {
+          pAmpMv: 0,
+          qAmpMv: 0,
+          rAmpMv: 1.28,
+          rDurationMs: 122,
+          rNotched: true,
+          sAmpMv: 0,
+          stDeviationMv: -0.12,
+          tAmpMv: -0.28,
+        },
+      },
+    },
+    { pAmpMv: 0, prIntervalMs: 120, qrsDurationMs: 152, qtIntervalMs: 420 },
+  ),
+};
+
+export const PSVT_CONDITION: EcgCondition = {
+  id: 'psvt',
+  domainId: 'takiaritmia',
+  domainName: 'Takiaritmia',
+  name: 'Paroxysmal Supraventricular Tachycardia (PSVT / AVNRT)',
+  noteReferencePath: 'src/notes/5.3 PSVT.md',
+  heartRateBpm: 150,
+  defaultLead: 'V1',
+  blockedTarget: 'av-reentry',
+  stages: {
+    1: {
+      ...NORMAL_SINUS_CONDITION.stages[1],
+      accentColor: '#d97706',
+      softBg: '#fffbeb',
+      activeParts: ['av-node'],
+      vectors: [],
+      heartStatusCaption:
+        'Gelombang P sinus menghilang selama takikardia karena PAC pemicu telah memulai sirkuit re-entri di AV Node.',
+      whatHappensInHeart:
+        'Cetusan prematur atrium (PAC) mendapati jalur cepat AV masih refrakter sehingga impuls melompat ke jalur lambat (slow pathway), menginisiasi putaran re-entri.',
+      whyEcgLooksLikeThis:
+        'Tidak tampak gelombang P sinus sebelum QRS di Lead V1; aktivasi atrium selanjutnya terjadi secara retrograd hampir bersamaan dengan ventrikel.',
+    },
+    2: {
+      ...NORMAL_SINUS_CONDITION.stages[2],
+      accentColor: '#dc2626',
+      softBg: '#fef2f2',
+      activeParts: ['av-node'],
+      vectors: [],
+      heartStatusCaption:
+        'Mikrosirkuit re-entri berputar cepat (slow-fast) di dalam AV junction tanpa jeda istirahat segmen PR.',
+      whatHappensInHeart:
+        'Impuls menuruni slow pathway lalu berbalik arah (re-enter) menaiki fast pathway secara terus-menerus membentuk sirkuit tertutup berkecepatan tinggi (140–220 bpm).',
+      whyEcgLooksLikeThis:
+        'Garis isoelektrik segmen PR menghilang karena putaran mikrosirkuit nodal berlangsung kontinu seperti metronom.',
+    },
+    3: {
+      ...NORMAL_SINUS_CONDITION.stages[3],
+      activeParts: [
+        'av-node',
+        'his-bundle',
+        'rbb',
+        'lbb',
+        'purkinje',
+        'right-ventricle',
+        'left-ventricle',
+        'right-atrium',
+        'left-atrium',
+      ],
+      vectors: [
+        {
+          id: 'vec-psvt-vent',
+          label: '1. Ventrikel via His-Purkinje (QRS Sempit)',
+          x1: 276,
+          y1: 230,
+          x2: 318,
+          y2: 326,
+          color: '#dc2626',
+        },
+        {
+          id: 'vec-psvt-retro',
+          label: '2. Atrium Retrograd (Pseudo-r\' di V1)',
+          x1: 266,
+          y1: 184,
+          x2: 214,
+          y2: 116,
+          color: '#d97706',
+          dashed: true,
+        },
+      ],
+      heartStatusCaption:
+        'Impuls keluar serempak ke bawah (His-Purkinje -> QRS sempit) dan ke atas secara retrograd (pseudo-r\' di V1).',
+      whatHappensInHeart:
+        'Setiap putaran sirkuit AVNRT mengirim impuls ke bawah menuruni berkas His ke ventrikel dan ke atas secara retrograd mengaktivasi kedua atrium hampir bersamaan.',
+      whyEcgLooksLikeThis:
+        'Di Lead V1 terbentuk kompleks QRS sempit (< 0,10 dtk) reguler cepat yang di ujung akhirnya muncul defleksi positif runcing (gelombang pseudo-r\'); di lead inferior tampak pseudo-S.',
+    },
+    4: {
+      ...NORMAL_SINUS_CONDITION.stages[4],
+      accentColor: '#059669',
+      softBg: '#ecfdf5',
+      heartStatusCaption:
+        'Repolarisasi berlangsung cepat di antara siklus; blokade AV Node menghentikan sirkuit seketika.',
+      whatHappensInHeart:
+        'Ventrikel berepolarisasi singkat akibat waktu diastol yang memendek; stimulasi vagal atau adenosin memperpanjang refrakteritas slow pathway untuk memutus sirkuit.',
+      whyEcgLooksLikeThis:
+        'Dapat dijumpai depresi segmen ST ringan transien di V4–V6 akibat laju cepat, yang pulih segera setelah takikardia berhenti mendadak ke irama sinus.',
+    },
+  },
+  leads: buildDerivedLeads(
+    {
+      I: { params: { pAmpMv: 0 } },
+      II: {
+        params: {
+          pAmpMv: 0,
+          rPrimeAmpMv: -0.22,
+          stDeviationMv: -0.05,
+        },
+        stageNotes: {
+          3: 'Tampak defleksi negatif semu (pseudo-S) di ujung akhir QRS sempit akibat aktivasi atrium retrograd.',
+        },
+      },
+      III: { params: { pAmpMv: 0, rPrimeAmpMv: -0.2 } },
+      aVR: { params: { pAmpMv: 0, rPrimeAmpMv: 0.2 } },
+      aVL: { params: { pAmpMv: 0 } },
+      aVF: { params: { pAmpMv: 0, rPrimeAmpMv: -0.2 } },
+      V1: {
+        params: {
+          pAmpMv: 0,
+          pTerminalAmpMv: 0,
+          qAmpMv: 0,
+          rAmpMv: 0.14,
+          rDurationMs: 22,
+          sAmpMv: -0.78,
+          sDurationMs: 36,
+          rPrimeAmpMv: 0.24,
+          stDeviationMv: 0,
+          tAmpMv: 0.12,
+          tDurationMs: 110,
+        },
+        stageNotes: {
+          1: 'Gelombang P sinus menghilang karena tertanam/tergantikan aktivasi retrograd.',
+          2: 'Putaran re-entri di AV junction berlangsung tanpa segmen PR isoelektrik.',
+          3: 'Kompleks QRS sempit reguler cepat dengan gelombang pseudo-r\' (+0,24 mV) di ekor QRS khas AVNRT.',
+          4: 'Repolarisasi singkat di antara denyut cepat; responsif terhadap manuver vagal/adenosin.',
+        },
+      },
+      V2: { params: { pAmpMv: 0, rPrimeAmpMv: 0.14 } },
+      V3: { params: { pAmpMv: 0 } },
+      V4: { params: { pAmpMv: 0, stDeviationMv: -0.08, stMorphology: 'downsloping' } },
+      V5: {
+        params: { pAmpMv: 0, stDeviationMv: -0.09, stMorphology: 'downsloping' },
+        stageNotes: {
+          4: 'Depresi segmen ST horizontal/downsloping transien akibat laju takikardia tinggi.',
+        },
+      },
+      V6: { params: { pAmpMv: 0, stDeviationMv: -0.08, stMorphology: 'downsloping' } },
+    },
+    { pAmpMv: 0, pDurationMs: 60, prIntervalMs: 70, qrsDurationMs: 78, qtIntervalMs: 240, tDurationMs: 110 },
+  ),
+};
+
+export const ATRIAL_FLUTTER_CONDITION: EcgCondition = {
+  id: 'atrial-flutter',
+  domainId: 'takiaritmia',
+  domainName: 'Takiaritmia',
+  name: 'Atrial Flutter (2:1 Block)',
+  noteReferencePath: 'src/notes/5.4 Atrial Flutter.md',
+  heartRateBpm: 150,
+  defaultLead: 'II',
+  stages: {
+    1: {
+      ...NORMAL_SINUS_CONDITION.stages[1],
+      activeParts: ['right-atrium', 'left-atrium'],
+      vectors: [
+        {
+          id: 'vec-afl-cti',
+          label: 'Makro-Reentri CTI Counterclockwise (Superior-Kiri)',
+          x1: 256,
+          y1: 184,
+          x2: 196,
+          y2: 108,
+          color: '#2563eb',
+        },
+      ],
+      heartStatusCaption:
+        'Sirkuit makro-reentri di atrium kanan (CTI) berputar kontinu ~300 bpm menghasilkan gelombang F gigi gergaji.',
+      whatHappensInHeart:
+        'Gelombang listrik berputar tanpa henti mengitari anulus trikuspid dan isthmus kavotrikuspid (counterclockwise ~300 putaran/menit), dengan resultan vektor netto mengarah ke superior-kiri.',
+      whyEcgLooksLikeThis:
+        'Di Lead II terekam gelombang F kontinu berbentuk gigi gergaji (sawtooth) dengan defleksi negatif tajam (−0,24 mV) tanpa garis datar isoelektrik sejati.',
+    },
+    2: {
+      ...NORMAL_SINUS_CONDITION.stages[2],
+      accentColor: '#d97706',
+      softBg: '#fffbeb',
+      heartStatusCaption:
+        'Nodus AV bertindak sebagai filter biologis (blok 2:1) yang hanya meloloskan setengah impuls ke ventrikel.',
+      whatHappensInHeart:
+        'Bombardir impuls atrium ~300 bpm membentur masa refrakter fisiologis Nodus AV, sehingga sebagian besar gelombang flutter tertahan dan hanya rasio 2:1 (atau lebih tinggi) yang lolos ke berkas His.',
+      whyEcgLooksLikeThis:
+        'Segmen PR isoelektrik normal menghilang karena undulasi gelombang F terus berlangsung, dengan konduksi teratur 2:1 menghasilkan laju ventrikel ~150 bpm.',
+    },
+    3: {
+      ...NORMAL_SINUS_CONDITION.stages[3],
+      heartStatusCaption:
+        'Impuls yang lolos menembus AV Node mengaktivasi kedua ventrikel lewat His-Purkinje (QRS sempit teratur).',
+      whatHappensInHeart:
+        'Setiap impuls atrium yang berhasil melewati saringan Nodus AV meluncur cepat menuruni berkas His dan cabang Purkinje secara sinkron.',
+      whyEcgLooksLikeThis:
+        'Terbentuk kompleks QRS berdurasi sempit normal (< 0,10 dtk) yang teratur pada ~150 bpm di atas gelombang flutter.',
+    },
+    4: {
+      ...NORMAL_SINUS_CONDITION.stages[4],
+      heartStatusCaption:
+        'Repolarisasi ventrikel (ST-T) menyatu dengan gelombang F berikutnya sehingga batas baseline kabur.',
+      whatHappensInHeart:
+        'Miokardium ventrikel menjalani repolarisasi sementara sirkuit makro-reentri di atrium terus berputar tanpa jeda istirahat global.',
+      whyEcgLooksLikeThis:
+        'Segmen ST dan puncak gelombang T di Lead II terdistorsi/berfusi dengan gelombang F berikutnya (manuver vagal/adenosin dapat menyingkap pola sawtooth).',
+    },
+  },
+  leads: buildDerivedLeads(
+    {
+      II: {
+        params: {
+          pAmpMv: -0.24,
+          pDurationMs: 110,
+          pSharpness: 'peaked',
+          prIntervalMs: 120,
+          tAmpMv: 0.14,
+          tDurationMs: 110,
+        },
+        stageNotes: {
+          1: 'Gelombang F negatif tajam (−0,24 mV) khas pola gigi gergaji (sawtooth) menggantikan gelombang P sinus.',
+          2: 'Filter AV Node (blok 2:1) menyaring laju atrium ~300 bpm menjadi laju ventrikel ~150 bpm.',
+          3: 'Kompleks QRS sempit reguler (0,08 dtk) menandakan aktivasi ventrikel normal via His-Purkinje.',
+          4: 'Kontur ST-T berfusi dengan undulasi gelombang F yang berlangsung terus-menerus.',
+        },
+      },
+      III: {
+        params: {
+          pAmpMv: -0.26,
+          pDurationMs: 110,
+          pSharpness: 'peaked',
+        },
+      },
+      aVF: {
+        params: {
+          pAmpMv: -0.22,
+          pDurationMs: 110,
+          pSharpness: 'peaked',
+        },
+      },
+      V1: {
+        params: {
+          pAmpMv: 0.18,
+          pTerminalAmpMv: 0,
+          pSharpness: 'peaked',
+          pDurationMs: 100,
+        },
+        stageNotes: {
+          1: 'Gelombang F tampak positif runcing (+0,18 mV) di prekordial kanan V1.',
+        },
+      },
+    },
+    { pDurationMs: 105, prIntervalMs: 120, qrsDurationMs: 78, qtIntervalMs: 250, tDurationMs: 110 },
+  ),
+};
+
+export const ATRIAL_FIBRILLATION_CONDITION: EcgCondition = {
+  id: 'atrial-fibrillation',
+  domainId: 'takiaritmia',
+  domainName: 'Takiaritmia',
+  name: 'Atrial Fibrillation (AF)',
+  noteReferencePath: 'src/notes/5.5 Atrial Fibrillation.md',
+  heartRateBpm: 124,
+  defaultLead: 'V1',
+  stages: {
+    1: {
+      ...NORMAL_SINUS_CONDITION.stages[1],
+      activeParts: ['left-atrium', 'right-atrium'],
+      vectors: [
+        {
+          id: 'vec-af-pv',
+          label: 'Mikro-Reentri Multipel Acak (Muara Vena Pulmonalis)',
+          x1: 356,
+          y1: 132,
+          x2: 294,
+          y2: 148,
+          color: '#2563eb',
+          dashed: true,
+        },
+        {
+          id: 'vec-af-ra',
+          label: 'Gelombang f Tak Terorganisir',
+          x1: 244,
+          y1: 142,
+          x2: 212,
+          y2: 164,
+          color: '#d97706',
+          dashed: true,
+        },
+      ],
+      heartStatusCaption:
+        'Gelombang mikro-reentri multipel berputar acak di kedua atrium (350–600 bpm); tidak ada gelombang P terorganisir.',
+      whatHappensInHeart:
+        'Letupan ektopik cepat dari muara vena pulmonalis atrium kiri memicu gelombang mikro-reentri multipel yang menyebar acak di seluruh dinding atrium tanpa vektor tunggal terkoordinasi.',
+      whyEcgLooksLikeThis:
+        'Gelombang P sinus normal lenyap total di Lead V1, digantikan oleh osilasi halus gelombang fibrilasi (gelombang f) dengan amplitudo dan bentuk yang berubah acak.',
+    },
+    2: {
+      ...NORMAL_SINUS_CONDITION.stages[2],
+      accentColor: '#d97706',
+      softBg: '#fffbeb',
+      heartStatusCaption:
+        'Konduksi tersembunyi di AV Node menyaring ratusan impuls atrium secara acak; interval PR menghilang.',
+      whatHappensInHeart:
+        'Ratusan impuls atrium membombardir Nodus AV tiap menit; konduksi dekremental dan concealed conduction di Nodus AV menahan sebagian besar impuls secara tidak teratur.',
+      whyEcgLooksLikeThis:
+        'Garis datar isoelektrik segmen PR menghilang dan tidak terdapat interval PR terukur karena impuls menembus Nodus AV secara acak.',
+    },
+    3: {
+      ...NORMAL_SINUS_CONDITION.stages[3],
+      heartStatusCaption:
+        'Impuls yang lolos acak dari AV Node turun lewat His-Purkinje menghasilkan QRS sempit irregularly irregular.',
+      whatHappensInHeart:
+        'Impuls atrium yang berhasil lolos secara acak melewati saringan Nodus AV meluncur cepat menuruni berkas His dan sistem Purkinje untuk mengaktivasi kedua ventrikel secara simetris.',
+      whyEcgLooksLikeThis:
+        'Di Lead V1 terekam kompleks QRS berdurasi sempit normal (< 0,10 dtk) pada laju cepat (RVR ~124 bpm) dengan jarak R-R yang pada strip kontinu sepenuhnya tidak teratur (irregularly irregular).',
+    },
+    4: {
+      ...NORMAL_SINUS_CONDITION.stages[4],
+      heartStatusCaption:
+        'Repolarisasi ventrikel (ST-T) tampak bergetar halus karena tertimpa osilasi gelombang f yang tak pernah berhenti.',
+      whatHappensInHeart:
+        'Miokardium ventrikel menjalani repolarisasi di tengah pengisian diastolik yang bervariasi, sementara aktivitas mikro-reentri atrium tetap berlangsung kontinu.',
+      whyEcgLooksLikeThis:
+        'Segmen ST dan gelombang T di Lead V1–V6 dapat mengalami depresi/pendataran ringan akibat laju cepat dengan kontur repolarisasi yang terdistorsi oleh getaran gelombang f.',
+    },
+  },
+  leads: buildDerivedLeads(
+    {
+      V1: {
+        params: {
+          pAmpMv: 0.04,
+          pTerminalAmpMv: -0.05,
+          pDurationMs: 110,
+          pNotched: true,
+          stDeviationMv: -0.05,
+          tAmpMv: 0.08,
+        },
+        stageNotes: {
+          1: 'Gelombang P sinus lenyap, digantikan getaran halus gelombang f beramplitudo rendah di V1.',
+          2: 'Tidak ada segmen PR isoelektrik karena konduksi tersembunyi acak di AV Node.',
+          3: 'Kompleks QRS sempit (0,08 dtk) dengan laju RVR cepat (124 bpm); pada strip kontinu jarak R-R bersifat irregularly irregular.',
+          4: 'Kontur ST-T tampak bergetar halus akibat tumpukan gelombang f atrium.',
+        },
+      },
+      V4: { params: { pAmpMv: 0, stDeviationMv: -0.06, stMorphology: 'downsloping', tAmpMv: 0.16 } },
+      V5: {
+        params: { pAmpMv: 0, stDeviationMv: -0.06, stMorphology: 'downsloping', tAmpMv: 0.16 },
+        stageNotes: {
+          4: 'Depresi ST dan pendataran gelombang T ringan akibat laju ventrikel cepat.',
+        },
+      },
+      V6: { params: { pAmpMv: 0, stDeviationMv: -0.05, stMorphology: 'downsloping', tAmpMv: 0.14 } },
+    },
+    { pAmpMv: 0, pDurationMs: 90, prIntervalMs: 120, qrsDurationMs: 80, qtIntervalMs: 310, tDurationMs: 130 },
+  ),
+};
+
+export const VT_CONDITION: EcgCondition = {
+  id: 'vt',
+  domainId: 'takiaritmia',
+  domainName: 'Takiaritmia',
+  name: 'Ventricular Tachycardia (VT) Monomorfik',
+  noteReferencePath: 'src/notes/5.6 VT.md',
+  heartRateBpm: 150,
+  defaultLead: 'V1',
+  stages: {
+    1: {
+      ...NORMAL_SINUS_CONDITION.stages[1],
+      activeParts: ['sa-node'],
+      vectors: [],
+      heartStatusCaption:
+        'SA Node berdenyut lambat mandiri (disosiasi AV) tanpa mengendalikan irama cepat ventrikel.',
+      whatHappensInHeart:
+        'Nodus SA tetap melepaskan impuls sinus secara teratur dengan lajunya sendiri (60–100 bpm), namun tidak terkoordinasi dengan aktivitas cepat fokus ektopik ventrikel.',
+      whyEcgLooksLikeThis:
+        'Gelombang P sinus berjalan mandiri di latar belakang (sering terkubur di dalam kompleks QRS lebar VT di Lead V1).',
+    },
+    2: {
+      ...NORMAL_SINUS_CONDITION.stages[2],
+      activeParts: ['av-node'],
+      vectors: [],
+      heartStatusCaption:
+        'AV junction mengalami refrakter akibat bombardir impuls ventrikel; tidak ada segmen PR terukur.',
+      whatHappensInHeart:
+        'Impuls ventrikel berkecepatan tinggi membuat Nodus AV berada dalam masa refrakter sehingga menghambat sebagian besar impuls atrium (kecuali sesekali capture/fusion beat).',
+      whyEcgLooksLikeThis:
+        'Segmen PR isoelektrik menghilang sepenuhnya tanpa hubungan konduksi tetap antara gelombang P dan QRS.',
+    },
+    3: {
+      ...NORMAL_SINUS_CONDITION.stages[3],
+      accentColor: '#dc2626',
+      softBg: '#fef2f2',
+      activeParts: ['left-ventricle', 'right-ventricle'],
+      vectors: [
+        {
+          id: 'vec-vt-reentry',
+          label: 'Re-entri Ventrikel Kiri ke Anterior-Kanan (Pola RBBB di V1)',
+          x1: 344,
+          y1: 298,
+          x2: 204,
+          y2: 254,
+          color: '#dc2626',
+        },
+      ],
+      heartStatusCaption:
+        'Sirkuit re-entri ventrikel meletup cepat (140–200 bpm) menyebar lambat antarsel -> QRS lebar seragam (≥ 0,14 dtk).',
+      whatHappensInHeart:
+        'Sirkuit makro-reentri di sekitar jaringan parut ventrikel kiri melepaskan impuls cepat secara otonom yang merambat miosit-ke-miosit menembus septum ke arah anterior-kanan.',
+      whyEcgLooksLikeThis:
+        'Di Lead V1 terekam rentetan QRS lebar (0,15 dtk) bermorfologi R monofasik lebar/bertakik dengan konkordansi positif di V1–V6 dan R awal dominan di aVR.',
+    },
+    4: {
+      ...NORMAL_SINUS_CONDITION.stages[4],
+      accentColor: '#d97706',
+      softBg: '#fffbeb',
+      vectors: [
+        {
+          id: 'vec-vt-discordant',
+          label: 'Repolarisasi Sekunder Diskordan (Berlawanan QRS)',
+          x1: 224,
+          y1: 266,
+          x2: 336,
+          y2: 296,
+          color: '#d97706',
+        },
+      ],
+      heartStatusCaption:
+        'ST-T berdeviasi berlawanan dengan QRS (diskordan); laju cepat membawa risiko degenerasi ke fibrilasi ventrikel.',
+      whatHappensInHeart:
+        'Depolarisasi intramiokardial yang kacau membalikkan vektor repolarisasi lokal sementara pemendekan diastol memicu iskemia sekunder.',
+      whyEcgLooksLikeThis:
+        'Tampak depresi segmen ST (−0,18 mV) dan inversi gelombang T sekunder (−0,38 mV) berlawanan arah dengan R lebar di V1.',
+    },
+  },
+  leads: buildDerivedLeads(
+    {
+      I: {
+        params: {
+          pAmpMv: 0,
+          rAmpMv: 0.45,
+          sAmpMv: -1.05,
+          sDurationMs: 96,
+          stDeviationMv: 0.12,
+          tAmpMv: 0.24,
+        },
+      },
+      II: {
+        params: {
+          pAmpMv: 0,
+          rAmpMv: 0.35,
+          sAmpMv: -1.18,
+          sDurationMs: 102,
+          stDeviationMv: 0.14,
+          tAmpMv: 0.28,
+        },
+        stageNotes: {
+          3: 'Defleksi dominan negatif di Lead II mencerminkan aksis superior ekstrem (northwest axis) khas asal ventrikel.',
+        },
+      },
+      III: {
+        params: {
+          pAmpMv: 0,
+          rAmpMv: 0.28,
+          sAmpMv: -1.24,
+          sDurationMs: 106,
+          stDeviationMv: 0.14,
+          tAmpMv: 0.26,
+        },
+      },
+      aVR: {
+        params: {
+          pAmpMv: 0,
+          rAmpMv: 1.12,
+          rDurationMs: 118,
+          sAmpMv: -0.15,
+          stDeviationMv: -0.14,
+          tAmpMv: -0.28,
+        },
+        stageNotes: {
+          3: 'Gelombang R awal dominan tinggi di Lead aVR (kriteria Vereckei positif untuk VT).',
+        },
+      },
+      V1: {
+        params: {
+          pAmpMv: 0,
+          pTerminalAmpMv: 0,
+          qAmpMv: 0,
+          rAmpMv: 1.48,
+          rDurationMs: 120,
+          rNotched: true,
+          sAmpMv: -0.22,
+          sDurationMs: 28,
+          stDeviationMv: -0.18,
+          stMorphology: 'downsloping',
+          tAmpMv: -0.38,
+        },
+        stageNotes: {
+          1: 'Gelombang P sinus independen (disosiasi AV) sering tersembunyi di dalam QRS lebar.',
+          2: 'Tidak ada segmen PR terukur akibat refrakteritas AV junction.',
+          3: 'QRS lebar monomorfik (+1,48 mV; 0,15 dtk) berbentuk R lebar bertakik khas fokus LV.',
+          4: 'Depresi ST (−0,18 mV) dan inversi T sekunder (−0,38 mV) yang diskordan terhadap QRS positif.',
+        },
+      },
+      V2: {
+        params: {
+          pAmpMv: 0,
+          rAmpMv: 1.52,
+          rDurationMs: 122,
+          rNotched: true,
+          sAmpMv: -0.18,
+          stDeviationMv: -0.18,
+          tAmpMv: -0.36,
+        },
+      },
+      V3: {
+        params: {
+          pAmpMv: 0,
+          rAmpMv: 1.44,
+          rDurationMs: 120,
+          sAmpMv: -0.14,
+          stDeviationMv: -0.16,
+          tAmpMv: -0.34,
+        },
+      },
+      V4: {
+        params: {
+          pAmpMv: 0,
+          rAmpMv: 1.36,
+          rDurationMs: 118,
+          sAmpMv: -0.1,
+          stDeviationMv: -0.14,
+          tAmpMv: -0.3,
+        },
+      },
+      V5: {
+        params: {
+          pAmpMv: 0,
+          rAmpMv: 1.28,
+          rDurationMs: 116,
+          sAmpMv: 0,
+          stDeviationMv: -0.14,
+          tAmpMv: -0.28,
+        },
+      },
+      V6: {
+        params: {
+          pAmpMv: 0,
+          rAmpMv: 1.18,
+          rDurationMs: 114,
+          sAmpMv: 0,
+          stDeviationMv: -0.12,
+          tAmpMv: -0.26,
+        },
+        stageNotes: {
+          3: 'Konkordansi positif prekordial (V1–V6 seluruhnya dominan positif) sangat spesifik untuk VT.',
+        },
+      },
+    },
+    { pAmpMv: 0, pDurationMs: 40, prIntervalMs: 50, qrsDurationMs: 148, qtIntervalMs: 224, tDurationMs: 60 },
+  ),
+};
+
+export const VF_CONDITION: EcgCondition = {
+  id: 'vf',
+  domainId: 'takiaritmia',
+  domainName: 'Takiaritmia',
+  name: 'Ventricular Fibrillation (VF)',
+  noteReferencePath: 'src/notes/5.7 VF.md',
+  heartRateBpm: 150,
+  defaultLead: 'II',
+  stages: {
+    1: {
+      ...NORMAL_SINUS_CONDITION.stages[1],
+      activeParts: ['sa-node'],
+      vectors: [],
+      heartStatusCaption:
+        'Gelombang P terorganisir lenyap total; aktivitas listrik atrium tenggelam dalam kekacauan ventrikel.',
+      whatHappensInHeart:
+        'Kegagalan perfusi koroner mendadak melumpuhkan sinkroni atrium, sementara sinyal sinus kecil yang tersisa tertutup penuh oleh aktivitas listrik kacau ventrikel.',
+      whyEcgLooksLikeThis:
+        'Tidak tampak gelombang P yang dapat dikenali di Lead II karena permukaan rekaman didominasi oleh osilasi gelombang getar ventrikel.',
+    },
+    2: {
+      ...NORMAL_SINUS_CONDITION.stages[2],
+      activeParts: ['av-node'],
+      vectors: [],
+      heartStatusCaption:
+        'Konduksi nodal terkoordinasi dan garis dasar segmen PR menghilang total.',
+      whatHappensInHeart:
+        'Sistem transmisi AV junction kehilangan koordinasi fisiologis akibat bombardir potensial aksi kacau dari ventrikel dan kolapsnya sirkulasi koroner.',
+      whyEcgLooksLikeThis:
+        'Garis datar isoelektrik segmen PR lenyap sepenuhnya tanpa interval PR yang dapat diukur di Lead II.',
+    },
+    3: {
+      ...NORMAL_SINUS_CONDITION.stages[3],
+      accentColor: '#dc2626',
+      softBg: '#fef2f2',
+      activeParts: ['right-ventricle', 'left-ventricle'],
+      vectors: [
+        {
+          id: 'vec-vf-wavelet1',
+          label: 'Mikro-Reentri Acak Ventrikel (Kaos Elektrik)',
+          x1: 214,
+          y1: 282,
+          x2: 312,
+          y2: 248,
+          color: '#dc2626',
+          dashed: true,
+        },
+        {
+          id: 'vec-vf-wavelet2',
+          label: 'Tabrakan Wavelet Multipel',
+          x1: 348,
+          y1: 306,
+          x2: 248,
+          y2: 330,
+          color: '#d97706',
+          dashed: true,
+        },
+      ],
+      heartStatusCaption:
+        'Kaos mikro-reentri multipel membuat ventrikel hanya bergetar (curah jantung = 0); QRS sejati lenyap.',
+      whatHappensInHeart:
+        'Ratusan gelombang mikro-reentri fungsional bertabrakan secara acak di kedua ventrikel sehingga miokardium hanya berkedut (quivering) tanpa kontraksi mekanis pemompaan.',
+      whyEcgLooksLikeThis:
+        'Di Lead II tidak ada kompleks QRS sejati; rekaman hanya berupa osilasi undulasi bizar kontinu yang bentuk dan amplitudonya berubah liar (coarse VF).',
+    },
+    4: {
+      ...NORMAL_SINUS_CONDITION.stages[4],
+      accentColor: '#d97706',
+      softBg: '#fffbeb',
+      heartStatusCaption:
+        'Diastol listrik menghilang (ST-T melebur ke osilasi); tanpa DC shock cepat akan merosot ke fine VF dan asistol.',
+      whatHappensInHeart:
+        'Repolarisasi seluler berlangsung kacau tanpa fase pemulihan seragam; deplesi ATP progresif perlahan memadamkan aktivitas listrik miosit.',
+      whyEcgLooksLikeThis:
+        'Segmen ST dan gelombang T tidak dapat dipisahkan dari osilasi fibrilasi; seiring waktu amplitudo coarse VF akan mengecil menjadi fine VF lalu garis lurus asistol.',
+    },
+  },
+  leads: buildDerivedLeads(
+    {
+      II: {
+        params: {
+          pAmpMv: 0,
+          qAmpMv: -0.38,
+          qDurationMs: 36,
+          rAmpMv: 0.64,
+          rDurationMs: 56,
+          rNotched: true,
+          sAmpMv: -0.58,
+          sDurationMs: 44,
+          rPrimeAmpMv: 0.42,
+          stDeviationMv: -0.14,
+          stMorphology: 'downsloping',
+          tAmpMv: -0.34,
+          tDurationMs: 75,
+        },
+        stageNotes: {
+          1: 'Gelombang P terorganisir menghilang total.',
+          2: 'Garis dasar isoelektrik segmen PR lenyap.',
+          3: 'Tidak ada kompleks QRS sejati; tampak osilasi undulasi kacau coarse VF beramplitudo berubah-ubah.',
+          4: 'Hilangnya diastol listrik (ST-T melebur ke getaran); memerlukan defibrilasi asinkron (DC shock) dan RJP segera.',
+        },
+      },
+    },
+    {
+      pAmpMv: 0,
+      pDurationMs: 40,
+      prIntervalMs: 45,
+      qAmpMv: -0.34,
+      qDurationMs: 36,
+      rAmpMv: 0.58,
+      rDurationMs: 56,
+      rNotched: true,
+      sAmpMv: -0.52,
+      sDurationMs: 44,
+      rPrimeAmpMv: 0.36,
+      qrsDurationMs: 145,
+      stDeviationMv: -0.12,
+      stMorphology: 'downsloping',
+      tAmpMv: -0.3,
+      tDurationMs: 75,
+      qtIntervalMs: 225,
+    },
+  ),
+};
+
+export const HYPERKALEMIA_CONDITION: EcgCondition = {
+  id: 'hyperkalemia',
+  domainId: 'metabolik-obat-pacemaker',
+  domainName: 'Metabolik, Obat & Pacemaker',
+  name: 'Hiperkalemia',
+  noteReferencePath: 'src/notes/6.1 Hiperkalemia.md',
+  heartRateBpm: 62,
+  defaultLead: 'V3',
+  stages: {
+    1: {
+      ...NORMAL_SINUS_CONDITION.stages[1],
+      accentColor: '#d97706',
+      softBg: '#fffbeb',
+      heartStatusCaption:
+        'Kelebihan kalium menginaktivasi kanal Na⁺ atrium sehingga gelombang P mendatar, mengecil, hingga lenyap.',
+      whatHappensInHeart:
+        'Peningkatan kalium ekstraseluler mendepolarisasi potensial istirahat membran miosit atrium dan menurunkan eksitabilitasnya hingga berisiko paralisis elektrik atrium (atrial standstill).',
+      whyEcgLooksLikeThis:
+        'Di Lead V3, amplitudo gelombang P tampak kian rendah dan mendatar (+0,05 mV) dibanding acuan Normal sebelum menghilang total pada derajat berat.',
+    },
+    2: {
+      ...NORMAL_SINUS_CONDITION.stages[2],
+      accentColor: '#d97706',
+      softBg: '#fffbeb',
+      heartStatusCaption:
+        'Konduksi di AV Node dan berkas His melambat sehingga interval PR memanjang (> 0,20 dtk).',
+      whatHappensInHeart:
+        'Hambatan konduksi listrik meluas ke AV junction dan berkas His akibat penurunan kecepatan depolarisasi fase 0.',
+      whyEcgLooksLikeThis:
+        'Segmen PR terulur memanjang (PR 0,23 dtk) sebelum gelombang P akhirnya menghilang pada hiperkalemia berat (ritme sinoventrikular).',
+    },
+    3: {
+      ...NORMAL_SINUS_CONDITION.stages[3],
+      accentColor: '#dc2626',
+      softBg: '#fef2f2',
+      heartStatusCaption:
+        'Depresi fase 0 memperlambat konduksi intraventrikel difus: QRS melebar toksik (≥ 0,12 dtk).',
+      whatHappensInHeart:
+        'Inaktivasi parsial kanal natrium cepat menurunkan laju hantar impuls di seluruh sistem His-Purkinje dan miokardium ventrikel secara difus.',
+      whyEcgLooksLikeThis:
+        'Kompleks QRS di Lead V3 melebar abnormal (0,13 dtk) dan pada kadar kalium sangat tinggi (> 8,0 mEq/L) dapat melebur dengan T membentuk pola sine wave sebelum asistol.',
+    },
+    4: {
+      ...NORMAL_SINUS_CONDITION.stages[4],
+      accentColor: '#dc2626',
+      softBg: '#fef2f2',
+      vectors: [
+        {
+          id: 'vec-hyperk-t',
+          label: 'Percepatan Fase 3 (Gel. T Tenting Tinggi-Simetris)',
+          x1: 292,
+          y1: 318,
+          x2: 338,
+          y2: 266,
+          color: '#dc2626',
+        },
+      ],
+      heartStatusCaption:
+        'Percepatan efluks K⁺ fase 3 memicu gelombang T tenting yang tinggi, simetris, dan runcing berdasar sempit.',
+      whatHappensInHeart:
+        'Peningkatan permeabilitas kalium membran mempercepat aliran keluar ion K⁺ pada fase 3 repolarisasi, memangkas durasi potensial aksi ventrikel secara seragam.',
+      whyEcgLooksLikeThis:
+        'Di Lead V3 terekam gelombang T tinggi (+1,15 mV), simetris, berujung runcing dengan dasar sempit (tented/peaked T wave) serta segmen ST yang memendek.',
+    },
+  },
+  leads: buildDerivedLeads(
+    {
+      II: {
+        params: {
+          pAmpMv: 0.06,
+          tAmpMv: 0.68,
+          tSharpness: 'peaked',
+          tDurationMs: 125,
+        },
+      },
+      V2: {
+        params: {
+          pAmpMv: 0.04,
+          stDeviationMv: 0.05,
+          tAmpMv: 1.05,
+          tSharpness: 'peaked',
+          tDurationMs: 125,
+        },
+      },
+      V3: {
+        params: {
+          pAmpMv: 0.05,
+          stDeviationMv: 0.05,
+          tAmpMv: 1.15,
+          tSharpness: 'peaked',
+          tDurationMs: 125,
+        },
+        stageNotes: {
+          1: 'Gelombang P mendatar/mengecil (+0,05 mV) akibat penurunan eksitabilitas atrium.',
+          2: 'Interval PR memanjang (0,23 dtk) akibat perlambatan konduksi AV.',
+          3: 'Kompleks QRS melebar toksik (0,13 dtk) akibat inaktivasi parsial kanal Na⁺.',
+          4: 'Gelombang T tenting tinggi (+1,15 mV), simetris, dan berdasar sempit khas hiperkalemia.',
+        },
+      },
+      V4: {
+        params: {
+          pAmpMv: 0.05,
+          tAmpMv: 1.02,
+          tSharpness: 'peaked',
+          tDurationMs: 125,
+        },
+      },
+    },
+    {
+      pDurationMs: 112,
+      prIntervalMs: 230,
+      qrsDurationMs: 128,
+      qtIntervalMs: 360,
+      tSharpness: 'peaked',
+      tDurationMs: 125,
+    },
+  ),
+};
+
+export const HYPOKALEMIA_CONDITION: EcgCondition = {
+  id: 'hypokalemia',
+  domainId: 'metabolik-obat-pacemaker',
+  domainName: 'Metabolik, Obat & Pacemaker',
+  name: 'Hipokalemia',
+  noteReferencePath: 'src/notes/6.2 Hipokalemia.md',
+  heartRateBpm: 72,
+  defaultLead: 'V3',
+  stages: {
+    1: {
+      ...NORMAL_SINUS_CONDITION.stages[1],
+      heartStatusCaption:
+        'SA Node memicu depolarisasi atrium kanan dan kiri secara normal.',
+      whatHappensInHeart:
+        'Nodus SA melepaskan impuls otomatis yang mendepolarisasi kedua atrium secara fisiologis ke arah inferior-anterior tanpa hambatan berarti.',
+      whyEcgLooksLikeThis:
+        'Terbentuk gelombang P dengan kontur normal di Lead II dan Lead V3 (terkadang sedikit lebih runcing) disertai interval PR normal.',
+    },
+    2: {
+      ...NORMAL_SINUS_CONDITION.stages[2],
+      heartStatusCaption:
+        'Impuls melewati AV Node dan berkas His dengan kecepatan fisiologis normal.',
+      whatHappensInHeart:
+        'Impuls listrik dihantarkan melintasi AV junction dan berkas His secara normal sebelum memasuki cabang berkas.',
+      whyEcgLooksLikeThis:
+        'Tercatat garis datar isoelektrik pada segmen PR tanpa deviasi bermakna di Lead V3.',
+    },
+    3: {
+      ...NORMAL_SINUS_CONDITION.stages[3],
+      heartStatusCaption:
+        'Depolarisasi ventrikel lewat His-Purkinje berlangsung cepat normal (QRS sempit).',
+      whatHappensInHeart:
+        'Kedua ruang ventrikel terdepolarisasi serentak melalui sistem His-Purkinje karena konduksi natrium fase 0 tidak tertekan secara primer.',
+      whyEcgLooksLikeThis:
+        'Di Lead V3 terekam kompleks QRS berdurasi sempit normal (< 0,10 dtk) dengan morfologi RS khas prekordial tengah tanpa gelombang Q patologis.',
+    },
+    4: {
+      ...NORMAL_SINUS_CONDITION.stages[4],
+      accentColor: '#d97706',
+      softBg: '#fffbeb',
+      vectors: [
+        {
+          id: 'vec-hypok-tu',
+          label: 'Repolarisasi Fase 3 Terulur (Pola Dip-and-Rise & Gel. U)',
+          x1: 292,
+          y1: 318,
+          x2: 338,
+          y2: 266,
+          color: '#d97706',
+        },
+      ],
+      heartStatusCaption:
+        'Penurunan arus keluar K⁺ fase 3 memperpanjang repolarisasi: depresi ST ringan, T mendatar, dan gelombang U menonjol.',
+      whatHappensInHeart:
+        'Rendahnya kalium ekstraseluler menurunkan arus kalium keluar pada fase 3, menunda pemulihan potensial aksi miosit ventrikel dan serabut Purkinje secara tidak homogen (berisiko EAD / Torsades de Pointes).',
+      whyEcgLooksLikeThis:
+        'Di Lead V3 terbentuk pola khas "dip-and-rise": depresi segmen ST ringan (−0,09 mV), gelombang T mendatar (+0,05 mV), lalu disusul gelombang U tinggi (+0,28 mV) yang melampaui tinggi T (fusi T-U / interval QU memanjang).',
+    },
+  },
+  leads: buildDerivedLeads(
+    {
+      II: {
+        params: {
+          stDeviationMv: -0.06,
+          tAmpMv: 0.08,
+          uAmpMv: 0.16,
+        },
+      },
+      V2: {
+        params: {
+          stDeviationMv: -0.08,
+          stMorphology: 'downsloping',
+          tAmpMv: 0.04,
+          uAmpMv: 0.24,
+        },
+      },
+      V3: {
+        params: {
+          stDeviationMv: -0.09,
+          stMorphology: 'downsloping',
+          tAmpMv: 0.05,
+          tDurationMs: 145,
+          uAmpMv: 0.28,
+        },
+        stageNotes: {
+          1: 'Gelombang P normal sebelum segmen PR.',
+          2: 'Segmen PR datar isoelektrik dengan interval PR normal.',
+          3: 'Kompleks QRS sempit normal (0,08 dtk) tanpa pelebaran primer.',
+          4: 'Pola klasik dip-and-rise: depresi ST ringan (−0,09 mV), gelombang T mendatar (+0,05 mV), dan gelombang U prominen (+0,28 mV) melampaui T.',
+        },
+      },
+      V4: {
+        params: {
+          stDeviationMv: -0.08,
+          stMorphology: 'downsloping',
+          tAmpMv: 0.06,
+          uAmpMv: 0.22,
+        },
+      },
+      V5: {
+        params: {
+          stDeviationMv: -0.06,
+          tAmpMv: 0.08,
+          uAmpMv: 0.16,
+        },
+      },
+    },
+    { qtIntervalMs: 390, uAmpMv: 0.14 },
+  ),
+};
+
+export const LONG_QT_SYNDROME_CONDITION: EcgCondition = {
+  id: 'long-qt-syndrome',
+  domainId: 'metabolik-obat-pacemaker',
+  domainName: 'Metabolik, Obat & Pacemaker',
+  name: 'Gangguan Kalsium & Long QT Syndrome',
+  noteReferencePath: 'src/notes/6.3 Long QT Syndrome.md',
+  heartRateBpm: 66,
+  defaultLead: 'II',
+  stages: {
+    1: {
+      ...NORMAL_SINUS_CONDITION.stages[1],
+      heartStatusCaption:
+        'SA Node memicu depolarisasi atrium kanan dan kiri secara normal.',
+      whatHappensInHeart:
+        'Nodus SA melepaskan impuls sinus secara ritmis mendepolarisasi kedua atrium ke arah inferior-anterior secara fisiologis.',
+      whyEcgLooksLikeThis:
+        'Terbentuk gelombang P normal di Lead II dengan interval PR fisiologis (0,12–0,20 dtk).',
+    },
+    2: {
+      ...NORMAL_SINUS_CONDITION.stages[2],
+      heartStatusCaption:
+        'Impuls melewati AV Node dan berkas His dengan kecepatan fisiologis normal.',
+      whatHappensInHeart:
+        'Impuls listrik melintasi persimpangan AV dan berkas His secara normal tanpa hambatan konduksi intrinsik.',
+      whyEcgLooksLikeThis:
+        'Tercatat garis datar isoelektrik pada segmen PR yang menjadi garis dasar acuan pengukuran interval QT.',
+    },
+    3: {
+      ...NORMAL_SINUS_CONDITION.stages[3],
+      heartStatusCaption:
+        'Depolarisasi ventrikel lewat His-Purkinje berlangsung cepat normal (QRS sempit).',
+      whatHappensInHeart:
+        'Impuls merambat cepat menuruni sistem His-Purkinje untuk mengaktivasi miokardium kedua ventrikel secara simetris dari endokardium ke epikardium.',
+      whyEcgLooksLikeThis:
+        'Di Lead II terekam kompleks QRS berdurasi sempit normal (< 0,10 dtk) tanpa pergeseran aksis maupun pelebaran fase 0.',
+    },
+    4: {
+      ...NORMAL_SINUS_CONDITION.stages[4],
+      accentColor: '#d97706',
+      softBg: '#fffbeb',
+      vectors: [
+        {
+          id: 'vec-lqts-repol',
+          label: 'Fase 2–3 Terulur (QTc > 500 ms, Risiko EAD/TdP)',
+          x1: 298,
+          y1: 320,
+          x2: 278,
+          y2: 254,
+          color: '#d97706',
+        },
+      ],
+      heartStatusCaption:
+        'Pemanjangan fase plateau (fase 2) atau repolarisasi (fase 3) mengulur interval QT (> 500 ms), rentan memicu Torsades de Pointes.',
+      whatHappensInHeart:
+        'Hipokalsemia memperpanjang fase plateau (fase 2), sementara gangguan kanal ion LQTS (IKs/IKr/late INa) menunda pemulihan repolarisasi ventrikel secara heterogen dan memicu early afterdepolarizations (EAD).',
+      whyEcgLooksLikeThis:
+        'Di Lead II tampak segmen ST isoelektrik yang terentang panjang sebelum gelombang T (QT 0,52 dtk > 0,50 dtk); sebaliknya pada hiperkalsemia segmen ST memendek drastis. QTc > 500 ms berisiko tinggi memicu Torsades de Pointes.',
+    },
+  },
+  leads: buildDerivedLeads(
+    {
+      II: {
+        params: {
+          stDeviationMv: 0,
+          tAmpMv: 0.3,
+          tDurationMs: 165,
+        },
+        stageNotes: {
+          1: 'Gelombang P sinus normal (+0,22 mV) di Lead II.',
+          2: 'Segmen PR datar isoelektrik dengan durasi normal.',
+          3: 'Kompleks QRS sempit normal (0,08 dtk).',
+          4: 'Segmen ST terentang datar memanjangkan interval QT nyata (0,52 dtk vs Normal 0,38 dtk); pola khas hipokalsemia/LQT3 (sedangkan LQT1 ber-T lebar dini dan LQT2 ber-T bifid).',
+        },
+      },
+      V3: {
+        params: {
+          stDeviationMv: 0,
+          tAmpMv: 0.44,
+          tDurationMs: 170,
+        },
+        stageNotes: {
+          4: 'Pemanjangan QT yang jelas memudahkan evaluasi risiko fenomena R-on-T dan Torsades de Pointes.',
+        },
+      },
+    },
+    { qtIntervalMs: 520, tDurationMs: 165 },
+  ),
+};
+
+export const BRUGADA_SYNDROME_CONDITION: EcgCondition = {
+  id: 'brugada-syndrome',
+  domainId: 'metabolik-obat-pacemaker',
+  domainName: 'Metabolik, Obat & Pacemaker',
+  name: 'Sindrom Brugada (Pola Tipe 1)',
+  noteReferencePath: 'src/notes/6.4 Sindrom Brugada.md',
+  heartRateBpm: 72,
+  defaultLead: 'V1',
+  stages: {
+    1: {
+      ...NORMAL_SINUS_CONDITION.stages[1],
+      heartStatusCaption:
+        'SA Node memicu depolarisasi atrium kanan dan kiri secara normal.',
+      whatHappensInHeart:
+        'Nodus SA melepaskan impuls listrik yang menyebar normal mendepolarisasi atrium kanan dan kiri tanpa gangguan konduksi berarti.',
+      whyEcgLooksLikeThis:
+        'Terbentuk gelombang P normal dengan defleksi bifasik halus di Lead V1 dan positif halus di Lead II.',
+    },
+    2: {
+      ...NORMAL_SINUS_CONDITION.stages[2],
+      heartStatusCaption:
+        'Impuls melewati AV Node dan berkas His secara normal; segmen PR menjadi baseline titik J.',
+      whatHappensInHeart:
+        'Impuls listrik dihantarkan melintasi AV junction dan berkas His menuju percabangan ventrikel dengan kecepatan fisiologis normal.',
+      whyEcgLooksLikeThis:
+        'Tercatat garis datar isoelektrik pada segmen PR yang menjadi garis acuan untuk mengukur elevasi titik J di prekordial kanan.',
+    },
+    3: {
+      ...NORMAL_SINUS_CONDITION.stages[3],
+      heartStatusCaption:
+        'Perlambatan lokal di epikardium RVOT membentuk pola pseudo-RBBB dengan lepas landas titik J tinggi (≥ 2 mm).',
+      whatHappensInHeart:
+        'Disfungsi kanal natrium (loss of function INa / mutasi SCN5A) memicu sedikit perlambatan konduksi lokal di epikardium traktus aliran keluar ventrikel kanan (RVOT).',
+      whyEcgLooksLikeThis:
+        'Di Lead V1 tampak pola menyerupai RBBB (pseudo-RBBB) tanpa gelombang S lebar di Lead I/V6, dengan ujung akhir QRS langsung lepas landas tinggi membentuk elevasi titik J (+0,28 mV).',
+    },
+    4: {
+      ...NORMAL_SINUS_CONDITION.stages[4],
+      accentColor: '#dc2626',
+      softBg: '#fef2f2',
+      vectors: [
+        {
+          id: 'vec-brugada-rvot',
+          label: 'Gradien Transmural RVOT ke Anterior-Kanan (V1–V2)',
+          x1: 244,
+          y1: 236,
+          x2: 186,
+          y2: 204,
+          color: '#dc2626',
+        },
+      ],
+      heartStatusCaption:
+        'Gradien transmural epikardium RVOT membentuk elevasi ST coved (Tipe 1) yang melandai ke inversi gelombang T.',
+      whatHappensInHeart:
+        'Dominasi arus kalium keluar transien (Ito) di epikardium RVOT yang tak terimbangi oleh INa menciptakan gradien voltase transmural ke arah anterior-kanan, berisiko memicu re-entri fase 2 dan VF.',
+      whyEcgLooksLikeThis:
+        'Di Lead V1–V2 terekam elevasi segmen ST melengkung coved (≥ 2 mm) yang menurun bertahap bersambung menjadi inversi gelombang T negatif (−0,28 mV), sementara V5–V6 tetap normal.',
+    },
+  },
+  leads: buildDerivedLeads(
+    {
+      V1: {
+        params: {
+          qAmpMv: 0,
+          rAmpMv: 0.34,
+          rDurationMs: 32,
+          sAmpMv: -0.24,
+          sDurationMs: 28,
+          rPrimeAmpMv: 0.36,
+          stDeviationMv: 0.28,
+          stMorphology: 'downsloping',
+          tAmpMv: -0.28,
+          tDurationMs: 165,
+        },
+        stageNotes: {
+          1: 'Gelombang P bifasik normal di V1.',
+          2: 'Segmen PR datar menjadi garis acuan elevasi titik J.',
+          3: 'Pola pseudo-RBBB dengan lepas landas titik J tinggi (+0,28 mV; ≥ 2 mm) tanpa S lebar di lateral.',
+          4: 'Elevasi segmen ST tipe coved melandai turun menyambung menjadi inversi gelombang T negatif (−0,28 mV) khas Brugada Tipe 1.',
+        },
+      },
+      V2: {
+        params: {
+          qAmpMv: 0,
+          rAmpMv: 0.42,
+          rDurationMs: 32,
+          sAmpMv: -0.28,
+          sDurationMs: 28,
+          rPrimeAmpMv: 0.3,
+          stDeviationMv: 0.26,
+          stMorphology: 'downsloping',
+          tAmpMv: -0.24,
+          tDurationMs: 165,
+        },
+        stageNotes: {
+          4: 'Elevasi ST coved dan inversi T khas Brugada Tipe 1 tampak jelas di V2.',
+        },
+      },
+      V3: {
+        params: {
+          stDeviationMv: 0.08,
+          stMorphology: 'downsloping',
+          tAmpMv: 0.16,
+        },
+      },
+    },
+    { qrsDurationMs: 96 },
+  ),
+};
+
+export const DIGOXIN_CONDITION: EcgCondition = {
+  id: 'digoxin',
+  domainId: 'metabolik-obat-pacemaker',
+  domainName: 'Metabolik, Obat & Pacemaker',
+  name: 'Efek & Toksisitas Digitalis (Digoksin)',
+  noteReferencePath: 'src/notes/6.5 Digoksin.md',
+  heartRateBpm: 58,
+  defaultLead: 'V5',
+  stages: {
+    1: {
+      ...NORMAL_SINUS_CONDITION.stages[1],
+      heartStatusCaption:
+        'Stimulasi vagal parasimpatis memperlambat letupan SA Node dengan gelombang P normal.',
+      whatHappensInHeart:
+        'Peningkatan tonus vagal pada Nodus SA memperlambat laju sinus istirahat, sementara depolarisasi atrium tetap menyebar normal ke arah inferior-anterior.',
+      whyEcgLooksLikeThis:
+        'Terbentuk gelombang P sinus normal di Lead II dan V5 dengan frekuensi denyut yang cenderung melambat (58 bpm).',
+    },
+    2: {
+      ...NORMAL_SINUS_CONDITION.stages[2],
+      accentColor: '#d97706',
+      softBg: '#fffbeb',
+      heartStatusCaption:
+        'Penekanan vagal pada AV Node memperlambat konduksi nodal sehingga interval PR memanjang (> 0,20 dtk).',
+      whatHappensInHeart:
+        'Efek parasimpatomimetik digitalis mendepresi kecepatan konduksi dan memperpanjang masa refrakter di Nodus AV.',
+      whyEcgLooksLikeThis:
+        'Tercatat pemanjangan interval PR (0,22 dtk / blok AV derajat 1) pada Lead V5 sebelum kompleks QRS terbentuk.',
+    },
+    3: {
+      ...NORMAL_SINUS_CONDITION.stages[3],
+      heartStatusCaption:
+        'Aktivasi ventrikel lewat His-Purkinje tetap berlangsung cepat dan sinkron (QRS sempit).',
+      whatHappensInHeart:
+        'Impuls listrik meluncur normal menuruni berkas His dan cabang Purkinje untuk mendepolarisasi kedua ventrikel secara simetris.',
+      whyEcgLooksLikeThis:
+        'Di Lead V5 terekam kompleks QRS berdurasi sempit normal (< 0,10 dtk) dengan gelombang R tinggi yang bersih.',
+    },
+    4: {
+      ...NORMAL_SINUS_CONDITION.stages[4],
+      accentColor: '#d97706',
+      softBg: '#fffbeb',
+      vectors: [
+        {
+          id: 'vec-digoxin-st',
+          label: 'Vektor ST Menjauhi LV + Pemendekan QT (Scooped ST)',
+          x1: 344,
+          y1: 288,
+          x2: 296,
+          y2: 256,
+          color: '#d97706',
+        },
+      ],
+      heartStatusCaption:
+        'Hambatan Na⁺/K⁺-ATPase memendekkan fase plateau & QT, membentuk depresi ST cekung ("scooped") khas di V5.',
+      whatHappensInHeart:
+        'Kelebihan kalsium intraseluler dan percepatan efluks kalium mempercepat fase 2–3 repolarisasi miosit ventrikel (memicu risiko DAD/aritmia bila toksik).',
+      whyEcgLooksLikeThis:
+        'Di Lead V5 tampak depresi segmen ST cekung seperti sendok (−0,14 mV; Salvador Dalí mustache) yang menyambung ke gelombang T rendah (+0,08 mV) disertai pemendekan interval QT (0,31 dtk).',
+    },
+  },
+  leads: buildDerivedLeads(
+    {
+      I: {
+        params: {
+          stDeviationMv: -0.08,
+          stMorphology: 'concave',
+          tAmpMv: 0.08,
+        },
+      },
+      II: {
+        params: {
+          stDeviationMv: -0.1,
+          stMorphology: 'concave',
+          tAmpMv: 0.08,
+        },
+        stageNotes: {
+          4: 'Depresi ST cekung (scooped) dan pemendekan QT juga tampak di lead inferior.',
+        },
+      },
+      III: {
+        params: {
+          stDeviationMv: -0.06,
+          stMorphology: 'concave',
+          tAmpMv: 0.06,
+        },
+      },
+      aVF: {
+        params: {
+          stDeviationMv: -0.08,
+          stMorphology: 'concave',
+          tAmpMv: 0.08,
+        },
+      },
+      V4: {
+        params: {
+          stDeviationMv: -0.1,
+          stMorphology: 'concave',
+          tAmpMv: 0.1,
+        },
+      },
+      V5: {
+        params: {
+          stDeviationMv: -0.14,
+          stMorphology: 'concave',
+          tAmpMv: 0.08,
+          tDurationMs: 120,
+        },
+        stageNotes: {
+          1: 'Gelombang P normal pada laju sinus yang melambat akibat tonus vagal (58 bpm).',
+          2: 'Interval PR memanjang ringan (0,22 dtk) akibat penekanan AV Node oleh digoksin.',
+          3: 'Kompleks QRS tetap sempit normal (0,08 dtk).',
+          4: 'Depresi ST cekung melengkung ("scooped" −0,14 mV), gelombang T mendatar (+0,08 mV), dan interval QT memendek (0,31 dtk).',
+        },
+      },
+      V6: {
+        params: {
+          stDeviationMv: -0.12,
+          stMorphology: 'concave',
+          tAmpMv: 0.08,
+          tDurationMs: 120,
+        },
+      },
+    },
+    { prIntervalMs: 220, qtIntervalMs: 310, tDurationMs: 120 },
+  ),
+};
+
+export const PACEMAKER_CONDITION: EcgCondition = {
+  id: 'pacemaker',
+  domainId: 'metabolik-obat-pacemaker',
+  domainName: 'Metabolik, Obat & Pacemaker',
+  name: 'Ritme Alat Pacu Jantung (Pacemaker)',
+  noteReferencePath: 'src/notes/6.6 Pacu Jantung.md',
+  heartRateBpm: 60,
+  defaultLead: 'V1',
+  stages: {
+    1: {
+      ...NORMAL_SINUS_CONDITION.stages[1],
+      heartStatusCaption:
+        'Atrium teraktivasi secara intrinsik oleh SA Node atau melalui pulsa pacu atrium (atrial pacing).',
+      whatHappensInHeart:
+        'Nodus SA mendepolarisasi atrium secara intrinsik, atau generator alat pacu jantung melepaskan pulsa listrik melalui elektroda atrium kanan bila laju intrinsik di bawah batas minimal.',
+      whyEcgLooksLikeThis:
+        'Terbentuk gelombang P sinus normal (atau gelombang P pacu beramplitudo rendah setelah atrial spike) dengan laju terprogram teratur (60 bpm).',
+    },
+    2: {
+      ...NORMAL_SINUS_CONDITION.stages[2],
+      heartStatusCaption:
+        'Alat pacu jantung menghitung jeda AV terprogram (AV delay) sebelum menstimulasi ventrikel.',
+      whatHappensInHeart:
+        'Sirkuit generator mempertahankan jeda atrioventrikular terprogram (programmed AV delay) untuk memberi waktu pengisian ventrikel mekanis oleh kontraksi atrium.',
+      whyEcgLooksLikeThis:
+        'Tercatat garis datar isoelektrik antara gelombang P dan pacing spike ventrikel yang menyerupai segmen PR fisiologis.',
+    },
+    3: {
+      ...NORMAL_SINUS_CONDITION.stages[3],
+      accentColor: '#dc2626',
+      softBg: '#fef2f2',
+      activeParts: ['right-ventricle', 'left-ventricle'],
+      vectors: [
+        {
+          id: 'vec-pacemaker-rva',
+          label: 'Pacu Apeks RV -> Kiri-Superior-Posterior (Pola LBBB)',
+          x1: 218,
+          y1: 298,
+          x2: 356,
+          y2: 242,
+          color: '#dc2626',
+        },
+      ],
+      heartStatusCaption:
+        'Elektroda di apeks RV memicu pacing spike tajam diikuti sebaran lambat antarsel -> QRS lebar pola LBBB di V1.',
+      whatHappensInHeart:
+        'Generator melepaskan impuls di apeks ventrikel kanan; gelombang depolarisasi merambat lambat miosit-ke-miosit di luar His-Purkinje menuju ventrikel kiri (kiri-superior-posterior).',
+      whyEcgLooksLikeThis:
+        'Di Lead V1 tampak artefak vertikal tajam (ventricular pacing spike) yang langsung disusul kompleks QS lebar (0,16 dtk; pola LBBB), serta defleksi negatif di lead inferior (II, III, aVF).',
+    },
+    4: {
+      ...NORMAL_SINUS_CONDITION.stages[4],
+      accentColor: '#059669',
+      softBg: '#ecfdf5',
+      heartStatusCaption:
+        'Repolarisasi ventrikel menunjukkan diskordansi ST-T sekunder yang wajar (ST sedikit naik & T positif di V1).',
+      whatHappensInHeart:
+        'Urutan depolarisasi asinkron dari apeks ventrikel kanan ke ventrikel kiri membalik gradien pemulihan listrik seluler secara sekunder.',
+      whyEcgLooksLikeThis:
+        'Di Lead V1 tercatat elevasi segmen ST ringan (+0,18 mV) dengan gelombang T positif tegak (+0,34 mV) berlawanan arah dengan kompleks QS (diskordansi normal pasca-pacu).',
+    },
+  },
+  leads: buildDerivedLeads(
+    {
+      I: {
+        params: {
+          qAmpMv: 0.38,
+          qDurationMs: 6,
+          rAmpMv: 1.05,
+          rDurationMs: 132,
+          rNotched: true,
+          sAmpMv: 0,
+          stDeviationMv: -0.09,
+          stMorphology: 'downsloping',
+          tAmpMv: -0.22,
+        },
+      },
+      II: {
+        params: {
+          qAmpMv: 0.38,
+          qDurationMs: 6,
+          rAmpMv: 0,
+          sAmpMv: -1.05,
+          sDurationMs: 140,
+          stDeviationMv: 0.12,
+          tAmpMv: 0.24,
+        },
+        stageNotes: {
+          3: 'Aksis superior/kiri ekstrem akibat pacu apeks RV menghasilkan kompleks QS lebar di lead inferior.',
+        },
+      },
+      III: {
+        params: {
+          qAmpMv: 0.36,
+          qDurationMs: 6,
+          rAmpMv: 0,
+          sAmpMv: -1.24,
+          sDurationMs: 144,
+          stDeviationMv: 0.14,
+          tAmpMv: 0.26,
+        },
+      },
+      aVR: {
+        params: {
+          qAmpMv: -0.34,
+          qDurationMs: 6,
+          rAmpMv: 0.72,
+          rDurationMs: 120,
+          sAmpMv: -0.2,
+          stDeviationMv: -0.08,
+          tAmpMv: -0.16,
+        },
+      },
+      aVL: {
+        params: {
+          qAmpMv: 0.36,
+          qDurationMs: 6,
+          rAmpMv: 0.92,
+          rDurationMs: 128,
+          rNotched: true,
+          sAmpMv: 0,
+          stDeviationMv: -0.08,
+          tAmpMv: -0.18,
+        },
+      },
+      aVF: {
+        params: {
+          qAmpMv: 0.36,
+          qDurationMs: 6,
+          rAmpMv: 0,
+          sAmpMv: -1.14,
+          sDurationMs: 142,
+          stDeviationMv: 0.12,
+          tAmpMv: 0.24,
+        },
+      },
+      V1: {
+        params: {
+          qAmpMv: 0.42,
+          qDurationMs: 6,
+          rAmpMv: 0,
+          sAmpMv: -1.42,
+          sDurationMs: 146,
+          stDeviationMv: 0.18,
+          stMorphology: 'concave',
+          tAmpMv: 0.34,
+          tDurationMs: 175,
+        },
+        stageNotes: {
+          1: 'Gelombang P normal sebelum jeda AV terprogram.',
+          2: 'Jeda AV terprogram (0,17 dtk) memisahkan aktivitas atrium dan pacu ventrikel.',
+          3: 'Ventricular pacing spike tajam (+0,42 mV) diikuti kompleks QS lebar pola LBBB (−1,42 mV; 0,16 dtk) dari apeks RV.',
+          4: 'Elevasi ST ringan (+0,18 mV) dan gelombang T positif (+0,34 mV) sebagai diskordansi sekunder yang normal.',
+        },
+      },
+      V2: {
+        params: {
+          qAmpMv: 0.4,
+          qDurationMs: 6,
+          rAmpMv: 0,
+          sAmpMv: -1.48,
+          sDurationMs: 146,
+          stDeviationMv: 0.18,
+          stMorphology: 'concave',
+          tAmpMv: 0.34,
+        },
+      },
+      V5: {
+        params: {
+          qAmpMv: 0.38,
+          qDurationMs: 6,
+          rAmpMv: 1.18,
+          rDurationMs: 136,
+          rNotched: true,
+          sAmpMv: 0,
+          stDeviationMv: -0.1,
+          stMorphology: 'downsloping',
+          tAmpMv: -0.24,
+        },
+      },
+      V6: {
+        params: {
+          qAmpMv: 0.36,
+          qDurationMs: 6,
+          rAmpMv: 1.12,
+          rDurationMs: 136,
+          rNotched: true,
+          sAmpMv: 0,
+          stDeviationMv: -0.1,
+          stMorphology: 'downsloping',
+          tAmpMv: -0.22,
+        },
+      },
+    },
+    { prIntervalMs: 170, qrsDurationMs: 156, qtIntervalMs: 430 },
+  ),
+};
+
 export const ECG_DOMAINS: EcgDomain[] = [
   {
     id: 'fisiologi-normal',
@@ -3816,12 +5552,27 @@ export const ECG_DOMAINS: EcgDomain[] = [
   {
     id: 'takiaritmia',
     name: 'Takiaritmia',
-    conditions: [],
+    conditions: [
+      PAC_CONDITION,
+      PVC_CONDITION,
+      PSVT_CONDITION,
+      ATRIAL_FLUTTER_CONDITION,
+      ATRIAL_FIBRILLATION_CONDITION,
+      VT_CONDITION,
+      VF_CONDITION,
+    ],
   },
   {
     id: 'metabolik-obat-pacemaker',
     name: 'Metabolik, Obat & Pacemaker',
-    conditions: [],
+    conditions: [
+      HYPERKALEMIA_CONDITION,
+      HYPOKALEMIA_CONDITION,
+      LONG_QT_SYNDROME_CONDITION,
+      BRUGADA_SYNDROME_CONDITION,
+      DIGOXIN_CONDITION,
+      PACEMAKER_CONDITION,
+    ],
   },
 ];
 
