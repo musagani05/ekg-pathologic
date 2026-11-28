@@ -37,7 +37,7 @@ export type BlockedConductionTarget = 'av-node' | 'av-reentry' | 'rbb' | 'lbb';
 
 export type IschemicZoneTarget = 'anterior-lv' | 'inferior' | 'subendocardial-lv';
 
-export type HypertrophyZoneTarget = 'right-atrium' | 'left-atrium';
+export type HypertrophyZoneTarget = 'right-atrium' | 'left-atrium' | 'left-ventricle';
 
 export interface LeadWaveParams {
   pAmpMv: number;
@@ -903,6 +903,195 @@ const P_MITRALE_CONDITION: EcgCondition = {
   ),
 };
 
+const LVH_CONDITION: EcgCondition = {
+  id: 'lvh',
+  domainId: 'kelainan-aksis-ruang',
+  domainName: 'Kelainan Aksis & Pembesaran Ruang Jantung',
+  name: 'Hipertrofi Ventrikel Kiri (LVH)',
+  noteReferencePath: 'src/notes/1.3 LVH.md',
+  heartRateBpm: 75,
+  defaultLead: 'V1',
+  hypertrophyZone: 'left-ventricle',
+  stages: {
+    1: {
+      ...NORMAL_SINUS_CONDITION.stages[1],
+      heartStatusCaption:
+        'Depolarisasi atrium berjalan normal, namun tekanan diastolik LV sering membebani atrium kiri.',
+      whatHappensInHeart:
+        'SA Node memicu depolarisasi atrium secara normal; bila ventrikel kiri yang kaku meneruskan tekanan ke atrium kiri, aktivasi atrium kiri sedikit tertunda.',
+      whyEcgLooksLikeThis:
+        'Gelombang P dapat tampak normal atau menunjukkan komponen negatif terminal sedikit lebih dalam/lebar di Lead V1 sebagai cerminan regangan atrium kiri penyerta.',
+    },
+    2: {
+      ...NORMAL_SINUS_CONDITION.stages[2],
+      heartStatusCaption:
+        'Impuls melewati AV Node dan berkas His dengan kecepatan fisiologis normal.',
+      whatHappensInHeart:
+        'Konduksi listrik melalui AV junction menuju Bundle of His berlangsung normal tanpa hambatan.',
+      whyEcgLooksLikeThis:
+        'Segmen PR tampak datar isoelektrik dengan interval PR tetap normal (0,12–0,20 detik).',
+    },
+    3: {
+      ...NORMAL_SINUS_CONDITION.stages[3],
+      vectors: [
+        {
+          id: 'vec-lvh-septal',
+          label: '1. Vektor Septum',
+          x1: 288,
+          y1: 254,
+          x2: 250,
+          y2: 242,
+          color: '#ea580c',
+          dashed: true,
+        },
+        {
+          id: 'vec-lvh-dominant',
+          label: '2. Vektor LV Sangat Kuat (Kiri-Posterior-Kranial)',
+          x1: 274,
+          y1: 244,
+          x2: 364,
+          y2: 326,
+          color: '#dc2626',
+        },
+      ],
+      heartStatusCaption:
+        'Massa dinding ventrikel kiri yang menebal hebat menghasilkan vektor depolarisasi sangat kuat ke arah kiri-posterior.',
+      whatHappensInHeart:
+        'Setelah septum aktif normal dari kiri ke kanan, massa otot ventrikel kiri yang menebal jauh lebih banyak terdepolarisasi sehingga gaya listrik resultan tertarik kuat ke belakang dan kiri.',
+      whyEcgLooksLikeThis:
+        'Di Lead V1 terbentuk r septal kecil disusul gelombang S sangat dalam (−1,95 mV) menjauhi elektroda; di Lead V5–V6 gelombang R menjulang tinggi (+2,02 mV) dengan durasi QRS di batas atas (0,11 detik).',
+    },
+    4: {
+      ...NORMAL_SINUS_CONDITION.stages[4],
+      accentColor: '#d97706',
+      softBg: '#fffbeb',
+      heartStatusCaption:
+        'Tekanan dan ketebalan dinding LV membalik urutan repolarisasi menjadi dari dalam ke luar (LV Strain).',
+      whatHappensInHeart:
+        'Beban tekanan tinggi dan penebalan miosit membalikkan pemulihan listrik ventrikel kiri sehingga berjalan dari endokardium ke epikardium (kebalikan dari fisiologi normal).',
+      whyEcgLooksLikeThis:
+        'Muncul diskordansi repolarisasi sekunder: di V1–V2 tampak elevasi ST konkaf sekunder dengan T tegak, sedangkan di lead lateral (V5–V6, I, aVL) tampak depresi ST landai dan inversi T (pola LV strain).',
+    },
+  },
+  leads: buildDerivedLeads(
+    {
+      I: {
+        params: {
+          rAmpMv: 1.48,
+          sAmpMv: 0,
+          stDeviationMv: -0.12,
+          stMorphology: 'downsloping',
+          tAmpMv: -0.22,
+        },
+        stageNotes: {
+          3: 'Gelombang R tinggi (+1,48 mV) akibat pergeseran vektor dan aksis ke kiri.',
+          4: 'Depresi ST landai dan inversi gelombang T (LV strain) di lateral tinggi.',
+        },
+      },
+      II: {
+        params: { rAmpMv: 0.88, sAmpMv: -0.22 },
+      },
+      III: {
+        params: { rAmpMv: 0.22, sAmpMv: -0.68 },
+      },
+      aVL: {
+        params: {
+          rAmpMv: 1.26,
+          sAmpMv: 0,
+          stDeviationMv: -0.12,
+          stMorphology: 'downsloping',
+          tAmpMv: -0.2,
+        },
+        stageNotes: {
+          3: 'Amplitudo R di aVL meningkat (+1,26 mV ≥ 11–13 mm) sesuai arah aksis yang bergeser ke kiri.',
+          4: 'Pola LV strain dengan depresi ST asimetris dan inversi T.',
+        },
+      },
+      aVF: {
+        params: { rAmpMv: 0.36, sAmpMv: -0.44 },
+      },
+      V1: {
+        params: {
+          pAmpMv: 0.07,
+          pTerminalAmpMv: -0.12,
+          pInitialRatio: 0.4,
+          pDurationMs: 118,
+          rAmpMv: 0.16,
+          rDurationMs: 20,
+          sAmpMv: -1.95,
+          sDurationMs: 76,
+          stDeviationMv: 0.14,
+          stMorphology: 'concave',
+          tAmpMv: 0.34,
+        },
+        stageNotes: {
+          1: 'Komponen negatif terminal P di V1 tampak sedikit lebih dalam (−0,12 mV) akibat beban tekanan atrium kiri penyerta.',
+          3: 'Gelombang r septal kecil diikuti gelombang S sangat dalam (−1,95 mV) dibanding acuan normal saat vektor LV menjauh ke posterior-kiri.',
+          4: 'Elevasi ST konkaf sekunder dan gelombang T tegak positif (cermin resiprokal dari LV strain, bukan STEMI anterior).',
+        },
+      },
+      V2: {
+        params: {
+          rAmpMv: 0.24,
+          rDurationMs: 22,
+          sAmpMv: -2.02,
+          sDurationMs: 76,
+          stDeviationMv: 0.16,
+          stMorphology: 'concave',
+          tAmpMv: 0.42,
+        },
+        stageNotes: {
+          3: 'Gelombang S sangat dalam (−2,02 mV) mencerminkan tarikan kuat massa ventrikel kiri.',
+          4: 'Elevasi ST sekunder konkaf dengan gelombang T tegak.',
+        },
+      },
+      V3: {
+        params: { rAmpMv: 0.62, sAmpMv: -1.65 },
+      },
+      V4: {
+        params: {
+          rAmpMv: 1.56,
+          sAmpMv: -0.52,
+          stDeviationMv: -0.08,
+          stMorphology: 'downsloping',
+          tAmpMv: -0.12,
+        },
+      },
+      V5: {
+        params: {
+          qAmpMv: -0.08,
+          rAmpMv: 2.02,
+          rDurationMs: 56,
+          sAmpMv: -0.08,
+          stDeviationMv: -0.18,
+          stMorphology: 'downsloping',
+          tAmpMv: -0.32,
+        },
+        stageNotes: {
+          3: 'Gelombang R menjulang tinggi (+2,02 mV; Sokolow-Lyon S_V1 + R_V5 ≈ 40 mm ≥ 35 mm) dengan puncak R agak melambat.',
+          4: 'Pola LV strain klasik: depresi ST landai ke bawah diikuti inversi gelombang T asimetris.',
+        },
+      },
+      V6: {
+        params: {
+          qAmpMv: -0.09,
+          rAmpMv: 1.82,
+          rDurationMs: 56,
+          sAmpMv: 0,
+          stDeviationMv: -0.16,
+          stMorphology: 'downsloping',
+          tAmpMv: -0.28,
+        },
+        stageNotes: {
+          3: 'Gelombang R tinggi (+1,82 mV) mencerminkan penebalan dinding lateral ventrikel kiri.',
+          4: 'Depresi ST landai dan inversi gelombang T asimetris.',
+        },
+      },
+    },
+    { qrsDurationMs: 106 },
+  ),
+};
+
 export const ECG_DOMAINS: EcgDomain[] = [
   {
     id: 'fisiologi-normal',
@@ -912,7 +1101,7 @@ export const ECG_DOMAINS: EcgDomain[] = [
   {
     id: 'kelainan-aksis-ruang',
     name: 'Kelainan Aksis & Pembesaran Ruang Jantung',
-    conditions: [P_PULMONALE_CONDITION, P_MITRALE_CONDITION],
+    conditions: [P_PULMONALE_CONDITION, P_MITRALE_CONDITION, LVH_CONDITION],
   },
   {
     id: 'konduksi-intraventrikel',

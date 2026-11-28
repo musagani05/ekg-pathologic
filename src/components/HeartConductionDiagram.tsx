@@ -364,9 +364,27 @@ export function HeartConductionDiagram({
             >
               <path
                 d="M 186 200 C 170 254, 190 330, 294 366 C 372 354, 406 274, 366 200 L 344 200 C 374 264, 350 326, 294 340 C 282 336, 276 328, 270 320 L 292 214 L 274 214 L 254 316 C 210 296, 194 250, 202 200 Z"
-                fill={ventFill}
-                stroke={ventStroke}
-                strokeWidth={ventricleActive ? 2.6 : 1.8}
+                fill={
+                  ventricleActive
+                    ? ventFill
+                    : condition.hypertrophyZone === 'left-ventricle'
+                      ? 'rgba(220, 38, 38, 0.09)'
+                      : ventFill
+                }
+                stroke={
+                  ventricleActive
+                    ? ventStroke
+                    : condition.hypertrophyZone === 'left-ventricle'
+                      ? '#ef4444'
+                      : ventStroke
+                }
+                strokeWidth={
+                  ventricleActive
+                    ? 2.6
+                    : condition.hypertrophyZone === 'left-ventricle'
+                      ? 2.2
+                      : 1.8
+                }
                 filter={ventricleActive ? 'url(#part-glow)' : undefined}
               />
               {/* Rongga Dalam RV & LV */}
@@ -543,6 +561,18 @@ export function HeartConductionDiagram({
                 strokeWidth="3.2"
                 strokeLinecap="round"
                 strokeDasharray="5 3"
+                opacity="0.85"
+                pointerEvents="none"
+              />
+            )}
+            {condition.hypertrophyZone === 'left-ventricle' && (
+              <path
+                d="M 370 202 C 410 278, 374 358, 294 370"
+                fill="none"
+                stroke="#dc2626"
+                strokeWidth="3.6"
+                strokeLinecap="round"
+                strokeDasharray="6 3"
                 opacity="0.85"
                 pointerEvents="none"
               />
