@@ -4,7 +4,7 @@ import { HeartConductionDiagram } from './components/HeartConductionDiagram';
 import { ProcessStagesPanel } from './components/ProcessStagesPanel';
 import { SingleLeadViewer } from './components/SingleLeadViewer';
 import type { EcgCondition, LeadId, StageId } from './data/ecgConditions';
-import { ECG_DOMAINS, STAGE_IDS } from './data/ecgConditions';
+import { ECG_DOMAINS, NORMAL_SINUS_CONDITION, STAGE_IDS } from './data/ecgConditions';
 import {
   ECG_STRIP_DURATION_MS,
   getBeatStageWindows,
@@ -27,6 +27,11 @@ function App() {
 
   const [selectedLead, setSelectedLead] = useState<LeadId>(
     activeCondition?.defaultLead ?? 'II',
+  );
+  const [comparisonConditionId, setComparisonConditionId] = useState<string>(
+    activeCondition && !activeCondition.isNormalBaseline
+      ? NORMAL_SINUS_CONDITION.id
+      : 'off',
   );
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [cycleSecondsSetting, setCycleSecondsSetting] = useState<number>(0);
@@ -163,6 +168,9 @@ function App() {
     setSelectedDomainId(cond.domainId);
     setActiveConditionId(cond.id);
     setSelectedLead(cond.defaultLead);
+    setComparisonConditionId(
+      cond.isNormalBaseline ? 'off' : NORMAL_SINUS_CONDITION.id,
+    );
     if (loopStage !== null) {
       const nextParams = cond.leads[cond.defaultLead].params;
       const win = getStripStageWindowMs(
@@ -425,6 +433,8 @@ function App() {
                 condition={activeCondition}
                 selectedLead={selectedLead}
                 onSelectLead={setSelectedLead}
+                comparisonConditionId={comparisonConditionId}
+                onSelectComparisonCondition={setComparisonConditionId}
                 activeStage={activeStage}
                 stripTimeMs={stripTimeMs}
                 onSelectStage={handleSelectStage}

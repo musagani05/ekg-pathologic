@@ -6,7 +6,8 @@ import type {
 } from '../data/ecgConditions';
 import {
   ALL_LEAD_IDS,
-  NORMAL_SINUS_CONDITION,
+  ECG_CONDITIONS,
+  ECG_DOMAINS,
 } from '../data/ecgConditions';
 import {
   buildCalibrationPulsePath,
@@ -18,6 +19,8 @@ export interface SingleLeadViewerProps {
   condition: EcgCondition;
   selectedLead: LeadId;
   onSelectLead: (lead: LeadId) => void;
+  comparisonConditionId: string;
+  onSelectComparisonCondition: (conditionId: string) => void;
   activeStage: StageId | null;
   stripTimeMs: number;
   onSelectStage: (stage: StageId, preferredBeatIndex?: number) => void;
@@ -34,6 +37,8 @@ export function SingleLeadViewer({
   condition,
   selectedLead,
   onSelectLead,
+  comparisonConditionId,
+  onSelectComparisonCondition,
   activeStage,
   stripTimeMs,
   onSelectStage,
@@ -42,15 +47,21 @@ export function SingleLeadViewer({
 
   const isPathologic = !condition.isNormalBaseline;
   const leadData = condition.leads[selectedLead];
-  const normalLeadData = NORMAL_SINUS_CONDITION.leads[selectedLead];
+  const comparisonCondition =
+    comparisonConditionId !== 'off'
+      ? (ECG_CONDITIONS.find((c) => c.id === comparisonConditionId) ?? null)
+      : null;
+  const comparisonLeadData = comparisonCondition
+    ? comparisonCondition.leads[selectedLead]
+    : null;
   const activeStageMeta = activeStage ? condition.stages[activeStage] : null;
 
   const renderPaths = useMemo(
     () =>
       buildLargeSingleLeadPaths({
         params: leadData.params,
-        normalReferenceParams: isPathologic ? normalLeadData.params : undefined,
-        normalReferenceHeartRateBpm: NORMAL_SINUS_CONDITION.heartRateBpm,
+        normalReferenceParams: comparisonLeadData?.params,
+        normalReferenceHeartRateBpm: comparisonCondition?.heartRateBpm,
         heartRateBpm: condition.heartRateBpm,
         startX: TRACE_START_X,
         pxPerMm: PX_PER_MM,
@@ -61,11 +72,15 @@ export function SingleLeadViewer({
       }),
     [
       leadData.params,
-      normalLeadData.params,
-      isPathologic,
+      comparisonLeadData?.params,
+      comparisonCondition?.heartRateBpm,
       condition.heartRateBpm,
       stripTimeMs,
     ],
+  );
+
+  const hasGhostOverlay = Boolean(
+    comparisonCondition && comparisonLeadData && renderPaths.normalReferencePath,
   );
 
   const calibPath = useMemo(
@@ -158,18 +173,45 @@ export function SingleLeadViewer({
         />
       )}
 
-      {isPathologic && (
-        <div className="ecg-comparison-legend" aria-label="Legenda perbandingan gelombang">
-          <span className="legend-item">
+      <div
+        className="ecg-comparison-legend"
+        aria-label="Legenda dan pembanding gelombang EKG"
+      >
+        <span className="legend-item legend-item-active">
+          <span className="legend-swatch-solid" aria-hidden="true" />
+          <span>Aktif: {condition.name}</span>
+        </span>
+
+        <div className="comparison-picker-group">
+          <label
+            htmlFor="ghost-comparison-select"
+            className="comparison-picker-label"
+          >
             <span className="legend-swatch-dashed" aria-hidden="true" />
-            Normal
-          </span>
-          <span className="legend-item legend-item-active">
-            <span className="legend-swatch-solid" aria-hidden="true" />
-            Patologis
-          </span>
+            <span>Pembanding ({selectedLead}):</span>
+          </label>
+          <select
+            id="ghost-comparison-select"
+            className="compact-comparison-select"
+            value={comparisonCondition ? comparisonCondition.id : 'off'}
+            onChange={(e) => onSelectComparisonCondition(e.target.value)}
+            aria-label="Pilih kondisi pembanding bayangan EKG"
+          >
+            <option value="off">Off (Tanpa Bayangan)</option>
+            {ECG_DOMAINS.filter((domain) => domain.conditions.length > 0).map(
+              (domain) => (
+                <optgroup key={domain.id} label={domain.name}>
+                  {domain.conditions.map((cond) => (
+                    <option key={cond.id} value={cond.id}>
+                      {cond.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ),
+            )}
+          </select>
         </div>
-      )}
+      </div>
 
       <div className="ecg-single-canvas-box">
         <div className="ecg-canvas-top-bar">
@@ -293,17 +335,17 @@ export function SingleLeadViewer({
             1 mV
           </text>
 
-          {/* Lapisan 1: Garis Acuan Normal Samar (Putus-putus) saat Kondisi Patologis Aktif */}
-          {isPathologic && renderPaths.normalReferencePath && (
+          {/* Lapisan 1: Bayangan Pembanding (Putus-putus) pada Lead Aktif */}
+          {hasGhostOverlay && renderPaths.normalReferencePath && (
             <path
               d={renderPaths.normalReferencePath}
               fill="none"
-              stroke="#94a3b8"
-              strokeWidth="1.8"
-              strokeDasharray="5 4"
+              stroke="#64748b"
+              strokeWidth="1.9"
+              strokeDasharray="4 4"
               strokeLinecap="round"
               strokeLinejoin="round"
-              opacity="0.82"
+              opacity="0.72"
               pointerEvents="none"
             />
           )}
@@ -312,11 +354,11 @@ export function SingleLeadViewer({
           <path
             d={renderPaths.fullPath}
             fill="none"
-            stroke={isPathologic ? '#0f172a' : '#94a3b8'}
-            strokeWidth={isPathologic ? 2.45 : 1.9}
+            stroke={isPathologic || hasGhostOverlay ? '#0f172a' : '#94a3b8'}
+            strokeWidth={isPathologic || hasGhostOverlay ? 2.45 : 1.9}
             strokeLinecap="round"
             strokeLinejoin="round"
-            opacity={isPathologic ? 0.86 : 0.42}
+            opacity={isPathologic || hasGhostOverlay ? 0.86 : 0.42}
             pointerEvents="none"
           />
 
@@ -325,7 +367,7 @@ export function SingleLeadViewer({
             d={renderPaths.progressivePath}
             fill="none"
             stroke="#0f172a"
-            strokeWidth={isPathologic ? 3.1 : 2.9}
+            strokeWidth={isPathologic || hasGhostOverlay ? 3.1 : 2.9}
             strokeLinecap="round"
             strokeLinejoin="round"
             pointerEvents="none"
