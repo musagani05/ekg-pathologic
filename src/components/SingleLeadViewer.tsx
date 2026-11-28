@@ -7,7 +7,6 @@ import type {
 import {
   ALL_LEAD_IDS,
   NORMAL_SINUS_CONDITION,
-  STAGE_IDS,
 } from '../data/ecgConditions';
 import {
   buildCalibrationPulsePath,
@@ -20,22 +19,23 @@ export interface SingleLeadViewerProps {
   selectedLead: LeadId;
   onSelectLead: (lead: LeadId) => void;
   activeStage: StageId | null;
-  cycleProgress: number;
-  onSelectStage: (stage: StageId) => void;
+  stripTimeMs: number;
+  onSelectStage: (stage: StageId, preferredBeatIndex?: number) => void;
 }
 
 const SVG_WIDTH = 680;
-const SVG_HEIGHT = 396;
-const PX_PER_MM = 7.0;
-const BASELINE_Y = 202;
-const TRACE_START_X = 96;
+const SVG_HEIGHT = 352;
+const PX_PER_MM = 9.6;
+const TRACE_START_X = 76;
+const SAFE_TOP_Y = 14;
+const SAFE_BOTTOM_Y = SVG_HEIGHT - 14;
 
 export function SingleLeadViewer({
   condition,
   selectedLead,
   onSelectLead,
   activeStage,
-  cycleProgress,
+  stripTimeMs,
   onSelectStage,
 }: SingleLeadViewerProps) {
   const [showLeadPositions, setShowLeadPositions] = useState<boolean>(false);
@@ -53,22 +53,24 @@ export function SingleLeadViewer({
         normalReferenceHeartRateBpm: NORMAL_SINUS_CONDITION.heartRateBpm,
         heartRateBpm: condition.heartRateBpm,
         startX: TRACE_START_X,
-        baselineY: BASELINE_Y,
         pxPerMm: PX_PER_MM,
-        cycleProgress,
+        stripTimeMs,
+        svgHeight: SVG_HEIGHT,
+        safeTopY: SAFE_TOP_Y,
+        safeBottomY: SAFE_BOTTOM_Y,
       }),
     [
       leadData.params,
       normalLeadData.params,
       isPathologic,
       condition.heartRateBpm,
-      cycleProgress,
+      stripTimeMs,
     ],
   );
 
   const calibPath = useMemo(
-    () => buildCalibrationPulsePath(16, BASELINE_Y, PX_PER_MM),
-    [],
+    () => buildCalibrationPulsePath(10, renderPaths.baselineY, PX_PER_MM),
+    [renderPaths.baselineY],
   );
 
   const activeStageMetricText = useMemo(() => {
@@ -110,9 +112,6 @@ export function SingleLeadViewer({
   }, [activeStage, leadData]);
 
   const activeRange = activeStage ? renderPaths.stageRangesPx[activeStage] : null;
-  const activeMidX = activeRange
-    ? Math.min(SVG_WIDTH - 145, Math.max(155, (activeRange.startX + activeRange.endX) / 2))
-    : 340;
 
   return (
     <section className="visual-card" aria-label="Viewer Gelombang EKG Utama">
@@ -173,6 +172,25 @@ export function SingleLeadViewer({
       )}
 
       <div className="ecg-single-canvas-box">
+        <div className="ecg-canvas-top-bar">
+          {activeStageMeta ? (
+            <div
+              className="ecg-stage-badge"
+              style={{
+                borderColor: activeStageMeta.accentColor,
+                color: activeStageMeta.accentColor,
+                backgroundColor: '#ffffff',
+              }}
+            >
+              {activeStageMeta.ecgWaveTitle} ({activeStageMeta.heartProcessTitle})
+            </div>
+          ) : (
+            <div className="ecg-stage-badge neutral">
+              Segmen TP — Garis Dasar Istirahat
+            </div>
+          )}
+        </div>
+
         <svg
           viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`}
           className="ecg-single-svg"
@@ -189,8 +207,8 @@ export function SingleLeadViewer({
               <path
                 d={`M ${PX_PER_MM} 0 L 0 0 0 ${PX_PER_MM}`}
                 fill="none"
-                stroke="rgba(239, 138, 138, 0.22)"
-                strokeWidth="0.65"
+                stroke="rgba(239, 138, 138, 0.24)"
+                strokeWidth="0.7"
               />
             </pattern>
             <pattern
@@ -207,8 +225,8 @@ export function SingleLeadViewer({
               <path
                 d={`M ${PX_PER_MM * 5} 0 L 0 0 0 ${PX_PER_MM * 5}`}
                 fill="none"
-                stroke="rgba(224, 92, 92, 0.42)"
-                strokeWidth="1.1"
+                stroke="rgba(224, 92, 92, 0.45)"
+                strokeWidth="1.2"
               />
             </pattern>
           </defs>
@@ -217,48 +235,39 @@ export function SingleLeadViewer({
           <rect width={SVG_WIDTH} height={SVG_HEIGHT} fill="url(#clean-ecg-major)" />
 
           {activeRange && activeStageMeta && (
-            <g>
-              <rect
-                x={activeRange.startX}
-                y={46}
-                width={Math.max(6, activeRange.endX - activeRange.startX)}
-                height={SVG_HEIGHT - 96}
-                rx="6"
-                fill={activeStageMeta.accentColor}
-                opacity="0.11"
-              />
-              <line
-                x1={(activeRange.startX + activeRange.endX) / 2}
-                y1={40}
-                x2={(activeRange.startX + activeRange.endX) / 2}
-                y2={48}
-                stroke={activeStageMeta.accentColor}
-                strokeWidth="1.6"
-              />
-            </g>
+            <rect
+              x={activeRange.startX}
+              y={SAFE_TOP_Y}
+              width={Math.max(6, activeRange.endX - activeRange.startX)}
+              height={SAFE_BOTTOM_Y - SAFE_TOP_Y}
+              rx="6"
+              fill={activeStageMeta.accentColor}
+              fillOpacity="0.1"
+              stroke={activeStageMeta.accentColor}
+              strokeOpacity="0.22"
+              strokeWidth="1"
+              pointerEvents="none"
+            />
           )}
 
-          {STAGE_IDS.map((stId) => {
-            const rng = renderPaths.stageRangesPx[stId];
-            return (
-              <rect
-                key={`hit-${stId}`}
-                x={rng.startX}
-                y={46}
-                width={Math.max(10, rng.endX - rng.startX)}
-                height={SVG_HEIGHT - 96}
-                fill="transparent"
-                className="wave-stage-hitbox"
-                onClick={() => onSelectStage(stId)}
-              />
-            );
-          })}
+          {renderPaths.allBeatStageHitboxes.map((hit) => (
+            <rect
+              key={`hit-${hit.beatIndex}-${hit.stageId}`}
+              x={hit.startX}
+              y={SAFE_TOP_Y}
+              width={Math.max(10, hit.endX - hit.startX)}
+              height={SAFE_BOTTOM_Y - SAFE_TOP_Y}
+              fill="transparent"
+              className="wave-stage-hitbox"
+              onClick={() => onSelectStage(hit.stageId, hit.beatIndex)}
+            />
+          ))}
 
           <line
             x1={TRACE_START_X}
-            y1={BASELINE_Y}
+            y1={renderPaths.baselineY}
             x2={SVG_WIDTH - 16}
-            y2={BASELINE_Y}
+            y2={renderPaths.baselineY}
             stroke="#94a3b8"
             strokeWidth="0.9"
             strokeDasharray="4 4"
@@ -269,13 +278,13 @@ export function SingleLeadViewer({
             d={calibPath}
             fill="none"
             stroke="#334155"
-            strokeWidth="2"
+            strokeWidth="2.1"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
           <text
-            x={16 + 4 * PX_PER_MM}
-            y={BASELINE_Y + 20}
+            x={10 + 3.1 * PX_PER_MM}
+            y={Math.min(SVG_HEIGHT - 6, renderPaths.baselineY + 16)}
             textAnchor="middle"
             fontSize="11"
             fontWeight="600"
@@ -290,11 +299,11 @@ export function SingleLeadViewer({
               d={renderPaths.normalReferencePath}
               fill="none"
               stroke="#94a3b8"
-              strokeWidth="1.6"
+              strokeWidth="1.8"
               strokeDasharray="5 4"
               strokeLinecap="round"
               strokeLinejoin="round"
-              opacity="0.8"
+              opacity="0.82"
               pointerEvents="none"
             />
           )}
@@ -304,10 +313,10 @@ export function SingleLeadViewer({
             d={renderPaths.fullPath}
             fill="none"
             stroke={isPathologic ? '#0f172a' : '#94a3b8'}
-            strokeWidth={isPathologic ? 2.35 : 1.8}
+            strokeWidth={isPathologic ? 2.45 : 1.9}
             strokeLinecap="round"
             strokeLinejoin="round"
-            opacity={isPathologic ? 0.86 : 0.4}
+            opacity={isPathologic ? 0.86 : 0.42}
             pointerEvents="none"
           />
 
@@ -316,7 +325,7 @@ export function SingleLeadViewer({
             d={renderPaths.progressivePath}
             fill="none"
             stroke="#0f172a"
-            strokeWidth={isPathologic ? 2.9 : 2.7}
+            strokeWidth={isPathologic ? 3.1 : 2.9}
             strokeLinecap="round"
             strokeLinejoin="round"
             pointerEvents="none"
@@ -328,7 +337,7 @@ export function SingleLeadViewer({
               d={renderPaths.stagePaths[activeStage]}
               fill="none"
               stroke={activeStageMeta.accentColor}
-              strokeWidth="4.4"
+              strokeWidth="4.6"
               strokeLinecap="round"
               strokeLinejoin="round"
               pointerEvents="none"
@@ -338,7 +347,7 @@ export function SingleLeadViewer({
           <circle
             cx={renderPaths.penPoint.x}
             cy={renderPaths.penPoint.y}
-            r="6.5"
+            r="6.8"
             fill={activeStageMeta ? activeStageMeta.accentColor : '#0f172a'}
             opacity="0.22"
             pointerEvents="none"
@@ -346,83 +355,17 @@ export function SingleLeadViewer({
           <circle
             cx={renderPaths.penPoint.x}
             cy={renderPaths.penPoint.y}
-            r="3.8"
+            r="4"
             fill={activeStageMeta ? activeStageMeta.accentColor : '#0f172a'}
             stroke="#ffffff"
             strokeWidth="1.6"
             pointerEvents="none"
           />
-
-          {activeStageMeta ? (
-            <g transform={`translate(${activeMidX}, 26)`} pointerEvents="none">
-              <rect
-                x="-135"
-                y="-14"
-                width="270"
-                height="26"
-                rx="13"
-                fill="#ffffff"
-                stroke={activeStageMeta.accentColor}
-                strokeWidth="1.5"
-              />
-              <text
-                x="0"
-                y="3"
-                textAnchor="middle"
-                fontSize="11.5"
-                fontWeight="700"
-                fill={activeStageMeta.accentColor}
-              >
-                {activeStageMeta.ecgWaveTitle} ({activeStageMeta.heartProcessTitle})
-              </text>
-            </g>
-          ) : (
-            <g transform="translate(340, 26)" pointerEvents="none">
-              <rect
-                x="-125"
-                y="-14"
-                width="250"
-                height="26"
-                rx="13"
-                fill="#ffffff"
-                stroke="#cbd5e1"
-                strokeWidth="1.2"
-              />
-              <text
-                x="0"
-                y="3"
-                textAnchor="middle"
-                fontSize="11.5"
-                fontWeight="600"
-                fill="#475569"
-              >
-                Segmen TP — Garis Dasar Istirahat
-              </text>
-            </g>
-          )}
-
-          <g transform="translate(340, 370)" pointerEvents="none">
-            <rect
-              x="-275"
-              y="-14"
-              width="550"
-              height="24"
-              rx="12"
-              fill="rgba(255, 255, 255, 0.94)"
-              stroke="#e2e8f0"
-            />
-            <text
-              x="0"
-              y="2"
-              textAnchor="middle"
-              fontSize="11"
-              fontWeight="600"
-              fill="#334155"
-            >
-              {activeStageMetricText}
-            </text>
-          </g>
         </svg>
+
+        <div className="ecg-canvas-bottom-bar">
+          <div className="ecg-metric-badge">{activeStageMetricText}</div>
+        </div>
       </div>
 
       <p className="visual-footer-caption">

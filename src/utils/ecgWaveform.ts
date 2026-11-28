@@ -243,10 +243,12 @@ export function getStageProgressRange(
   return { startProgress, endProgress };
 }
 
+export const ECG_STRIP_DURATION_MS = 2450;
+
 /**
- * Mengembalikan titik progres [0..1] representatif (puncak/akhir segmen) ketika user memilih suatu tahap.
+ * Mengembalikan waktu jangkar (ms) dalam 1 siklus [0..cycleMs] untuk suatu tahap.
  */
-export function getAnchorProgressForStage(
+export function getAnchorTimeMsForStage(
   params: LeadWaveParams,
   heartRateBpm: number,
   stageId: StageId,
@@ -259,9 +261,69 @@ export function getAnchorProgressForStage(
     3: 0.74,
     4: 0.7,
   };
-  const targetMs =
-    range.startMs + (range.endMs - range.startMs) * anchorRatioByStage[stageId];
-  return targetMs / win.cycleMs;
+  return range.startMs + (range.endMs - range.startMs) * anchorRatioByStage[stageId];
+}
+
+/**
+ * Mengembalikan titik progres [0..1] representatif (puncak/akhir segmen) ketika user memilih suatu tahap.
+ */
+export function getAnchorProgressForStage(
+  params: LeadWaveParams,
+  heartRateBpm: number,
+  stageId: StageId,
+): number {
+  const win = getBeatStageWindows(params, heartRateBpm);
+  return getAnchorTimeMsForStage(params, heartRateBpm, stageId) / win.cycleMs;
+}
+
+/**
+ * Menentukan waktu pada strip kontinu (ms) untuk tahap terpilih pada denyut aktif
+ * saat ini agar tidak melompat reset ke sisi paling kiri saat user pause/klik tahap.
+ */
+export function resolveStageStripTimeMs(
+  params: LeadWaveParams,
+  heartRateBpm: number,
+  currentStripTimeMs: number,
+  stageId: StageId,
+  stripDurationMs = ECG_STRIP_DURATION_MS,
+  preferredBeatIndex?: number,
+): number {
+  const win = getBeatStageWindows(params, heartRateBpm);
+  const anchorMs = getAnchorTimeMsForStage(params, heartRateBpm, stageId);
+  let beatIndex =
+    preferredBeatIndex ?? Math.floor(Math.max(0, currentStripTimeMs) / win.cycleMs);
+
+  while (beatIndex > 0 && beatIndex * win.cycleMs + anchorMs > stripDurationMs - 8) {
+    beatIndex -= 1;
+  }
+
+  return Math.min(stripDurationMs - 4, Math.max(0, beatIndex * win.cycleMs + anchorMs));
+}
+
+/**
+ * Mengembalikan rentang waktu [startMs, endMs] dalam strip kontinu untuk melakukan loop pada satu tahap.
+ */
+export function getStripStageWindowMs(
+  params: LeadWaveParams,
+  heartRateBpm: number,
+  currentStripTimeMs: number,
+  stageId: StageId,
+  stripDurationMs = ECG_STRIP_DURATION_MS,
+  preferredBeatIndex?: number,
+): { startMs: number; endMs: number; beatIndex: number } {
+  const win = getBeatStageWindows(params, heartRateBpm);
+  const range = win.stageWindows[stageId];
+  let beatIndex =
+    preferredBeatIndex ?? Math.floor(Math.max(0, currentStripTimeMs) / win.cycleMs);
+
+  while (beatIndex > 0 && beatIndex * win.cycleMs + range.startMs >= stripDurationMs - 12) {
+    beatIndex -= 1;
+  }
+
+  const offset = beatIndex * win.cycleMs;
+  const startMs = Math.min(stripDurationMs - 8, Math.max(0, offset + range.startMs));
+  const endMs = Math.max(startMs + 8, Math.min(stripDurationMs - 2, offset + range.endMs));
+  return { startMs, endMs, beatIndex };
 }
 
 export interface SingleLeadCyclePaths {
@@ -271,11 +333,18 @@ export interface SingleLeadCyclePaths {
   stagePaths: Record<StageId, string>;
   penPoint: { x: number; y: number };
   stageRangesPx: Record<StageId, { startX: number; endX: number }>;
+  baselineY: number;
+  allBeatStageHitboxes: Array<{
+    beatIndex: number;
+    stageId: StageId;
+    startX: number;
+    endX: number;
+  }>;
 }
 
 /**
- * Membangun path kurva SVG untuk tampilan 1 Lead Utama Besar (2 siklus berurutan)
- * sekaligus menghasilkan path garis acuan Normal secara opsional saat kondisi patologis aktif.
+ * Membangun path kurva SVG untuk tampilan 1 Lead Utama Besar (beberapa siklus berurutan)
+ * sekaligus menghasilkan path garis acuan Normal, baseline adaptif, dan batas aman vertikal.
  */
 export function buildLargeSingleLeadPaths(options: {
   params: LeadWaveParams;
@@ -283,9 +352,12 @@ export function buildLargeSingleLeadPaths(options: {
   normalReferenceHeartRateBpm?: number;
   heartRateBpm: number;
   startX: number;
-  baselineY: number;
   pxPerMm: number;
-  cycleProgress: number;
+  stripTimeMs: number;
+  stripDurationMs?: number;
+  svgHeight: number;
+  safeTopY: number;
+  safeBottomY: number;
 }): SingleLeadCyclePaths {
   const {
     params,
@@ -293,21 +365,69 @@ export function buildLargeSingleLeadPaths(options: {
     normalReferenceHeartRateBpm,
     heartRateBpm,
     startX,
-    baselineY,
     pxPerMm,
-    cycleProgress,
+    stripTimeMs,
+    stripDurationMs = ECG_STRIP_DURATION_MS,
+    safeTopY,
+    safeBottomY,
   } = options;
   const win = getBeatStageWindows(params, heartRateBpm);
+  const totalMs = stripDurationMs;
 
-  const totalMs = Math.max(win.cycleMs * 2, 2500);
+  // Hitung amplitudo puncak positif/negatif dari kondisi aktif (+ Normal) agar baseline adaptif
+  let maxMv = 1.05;
+  let minMv = -0.35;
+  for (let t = 0; t <= win.cycleMs; t += 5) {
+    const v = sampleLeadVoltageMv(params, t, heartRateBpm);
+    if (v > maxMv) maxMv = v;
+    if (v < minMv) minMv = v;
+  }
+  if (normalReferenceParams) {
+    const refHr = normalReferenceHeartRateBpm ?? heartRateBpm;
+    const refWin = getBeatStageWindows(normalReferenceParams, refHr);
+    for (let t = 0; t <= refWin.cycleMs; t += 5) {
+      const rv = sampleLeadVoltageMv(normalReferenceParams, t, refHr);
+      if (rv > maxMv) maxMv = rv;
+      if (rv < minMv) minMv = rv;
+    }
+  }
+
+  const peakPosMv = Math.max(1.05, maxMv);
+  const peakNegMv = Math.max(0.35, -minMv);
+  const usableH = safeBottomY - safeTopY;
+  const needTop = peakPosMv * 10 * pxPerMm + 8;
+  const needBottom = peakNegMv * 10 * pxPerMm + 8;
+
+  let baselineY = Math.round((safeTopY + safeBottomY) * 0.53);
+  if (baselineY - needTop < safeTopY) {
+    baselineY = Math.min(
+      safeBottomY - Math.min(needBottom, usableH * 0.26),
+      safeTopY + needTop,
+    );
+  }
+  if (baselineY + needBottom > safeBottomY) {
+    baselineY = Math.max(safeTopY + 10 * pxPerMm + 6, safeBottomY - needBottom);
+  }
+  baselineY = Math.round(baselineY);
+
   const sampleStepMs = 3;
   const totalSteps = Math.ceil(totalMs / sampleStepMs);
-
-  const clampedProgress = Math.min(1, Math.max(0, cycleProgress));
-  const activeTimeMs = clampedProgress * win.cycleMs;
+  const activeTimeMs = Math.min(totalMs, Math.max(0, stripTimeMs));
 
   const msToX = (ms: number) => startX + (ms / 1000) * 25 * pxPerMm;
-  const mvToY = (mv: number) => baselineY - mv * 10 * pxPerMm;
+  const mvToY = (mv: number) => {
+    const rawY = baselineY - mv * 10 * pxPerMm;
+    const knee = 12;
+    if (rawY < safeTopY + knee) {
+      const soft = safeTopY + knee * (1 - Math.tanh((safeTopY + knee - rawY) / knee));
+      return Math.max(safeTopY, soft);
+    }
+    if (rawY > safeBottomY - knee) {
+      const soft = safeBottomY - knee * (1 - Math.tanh((rawY - (safeBottomY - knee)) / knee));
+      return Math.min(safeBottomY, soft);
+    }
+    return rawY;
+  };
 
   const fullPts: string[] = [];
   const progPts: string[] = [];
@@ -330,11 +450,20 @@ export function buildLargeSingleLeadPaths(options: {
     }
   }
 
+  let activeBeatIndex = Math.floor(activeTimeMs / win.cycleMs);
+  if (activeBeatIndex * win.cycleMs + win.stageWindows[1].startMs >= totalMs) {
+    activeBeatIndex = Math.max(0, activeBeatIndex - 1);
+  }
+  const beatOffsetMs = activeBeatIndex * win.cycleMs;
+
   const buildRangePath = (fromMs: number, toMs: number): string => {
+    const clampedFrom = Math.min(totalMs, Math.max(0, fromMs));
+    const clampedTo = Math.min(totalMs, Math.max(clampedFrom, toMs));
+    if (clampedTo <= clampedFrom) return '';
     const pts: string[] = [];
-    const steps = Math.max(2, Math.ceil((toMs - fromMs) / 2.5));
+    const steps = Math.max(2, Math.ceil((clampedTo - clampedFrom) / 2.5));
     for (let i = 0; i <= steps; i++) {
-      const tMs = fromMs + ((toMs - fromMs) * i) / steps;
+      const tMs = clampedFrom + ((clampedTo - clampedFrom) * i) / steps;
       const x = msToX(tMs);
       const y = mvToY(sampleLeadVoltageMv(params, tMs, heartRateBpm));
       pts.push(`${i === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`);
@@ -343,18 +472,53 @@ export function buildLargeSingleLeadPaths(options: {
   };
 
   const stagePaths: Record<StageId, string> = {
-    1: buildRangePath(win.stageWindows[1].startMs, win.stageWindows[1].endMs),
-    2: buildRangePath(win.stageWindows[2].startMs, win.stageWindows[2].endMs),
-    3: buildRangePath(win.stageWindows[3].startMs, win.stageWindows[3].endMs),
-    4: buildRangePath(win.stageWindows[4].startMs, win.stageWindows[4].endMs),
+    1: buildRangePath(
+      beatOffsetMs + win.stageWindows[1].startMs,
+      beatOffsetMs + win.stageWindows[1].endMs,
+    ),
+    2: buildRangePath(
+      beatOffsetMs + win.stageWindows[2].startMs,
+      beatOffsetMs + win.stageWindows[2].endMs,
+    ),
+    3: buildRangePath(
+      beatOffsetMs + win.stageWindows[3].startMs,
+      beatOffsetMs + win.stageWindows[3].endMs,
+    ),
+    4: buildRangePath(
+      beatOffsetMs + win.stageWindows[4].startMs,
+      beatOffsetMs + win.stageWindows[4].endMs,
+    ),
   };
 
+  const clampXRange = (sMs: number, eMs: number) => ({
+    startX: msToX(Math.min(totalMs, beatOffsetMs + sMs)),
+    endX: msToX(Math.min(totalMs, beatOffsetMs + eMs)),
+  });
+
   const stageRangesPx: Record<StageId, { startX: number; endX: number }> = {
-    1: { startX: msToX(win.stageWindows[1].startMs), endX: msToX(win.stageWindows[1].endMs) },
-    2: { startX: msToX(win.stageWindows[2].startMs), endX: msToX(win.stageWindows[2].endMs) },
-    3: { startX: msToX(win.stageWindows[3].startMs), endX: msToX(win.stageWindows[3].endMs) },
-    4: { startX: msToX(win.stageWindows[4].startMs), endX: msToX(win.stageWindows[4].endMs) },
+    1: clampXRange(win.stageWindows[1].startMs, win.stageWindows[1].endMs),
+    2: clampXRange(win.stageWindows[2].startMs, win.stageWindows[2].endMs),
+    3: clampXRange(win.stageWindows[3].startMs, win.stageWindows[3].endMs),
+    4: clampXRange(win.stageWindows[4].startMs, win.stageWindows[4].endMs),
   };
+
+  const allBeatStageHitboxes: SingleLeadCyclePaths['allBeatStageHitboxes'] = [];
+  const maxBeat = Math.floor(totalMs / win.cycleMs);
+  for (let b = 0; b <= maxBeat; b++) {
+    const offset = b * win.cycleMs;
+    for (const sId of [1, 2, 3, 4] as StageId[]) {
+      const rStart = offset + win.stageWindows[sId].startMs;
+      if (rStart >= totalMs - 10) continue;
+      const rEnd = Math.min(totalMs, offset + win.stageWindows[sId].endMs);
+      if (rEnd <= rStart) continue;
+      allBeatStageHitboxes.push({
+        beatIndex: b,
+        stageId: sId,
+        startX: msToX(rStart),
+        endX: msToX(rEnd),
+      });
+    }
+  }
 
   const penPoint = {
     x: msToX(activeTimeMs),
@@ -368,6 +532,8 @@ export function buildLargeSingleLeadPaths(options: {
     stagePaths,
     penPoint,
     stageRangesPx,
+    baselineY,
+    allBeatStageHitboxes,
   };
 }
 
@@ -376,10 +542,10 @@ export function buildCalibrationPulsePath(
   baselineY: number,
   pxPerMm: number,
 ): string {
-  const leadIn = 1.5 * pxPerMm;
-  const width = 5 * pxPerMm;
+  const leadIn = 1.0 * pxPerMm;
+  const width = 4.2 * pxPerMm;
   const height = 10 * pxPerMm;
-  const leadOut = 1.5 * pxPerMm;
+  const leadOut = 1.0 * pxPerMm;
 
   const x0 = startX;
   const x1 = x0 + leadIn;

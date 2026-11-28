@@ -54,6 +54,9 @@
   font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
+  max-width: 100%;
+  height: auto;
+  min-height: fit-content;
   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
@@ -147,6 +150,7 @@
 .stage-pill-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   background-color: #ffffff;
   color: #475569;
@@ -156,6 +160,12 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  max-width: 100%;
+  height: auto;
+  min-height: fit-content;
+  text-align: center;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   transition: all 0.15s ease;
 }
 
@@ -184,40 +194,86 @@
 .speed-picker {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  flex-wrap: wrap;
+  gap: 8px;
   background: #ffffff;
   border: 1px solid var(--border-subtle);
   border-radius: 9px;
-  padding: 4px 7px;
+  padding: 5px 10px;
+  max-width: 100%;
+  height: auto;
+  min-height: fit-content;
 }
 
 .speed-caption {
   font-size: 12.5px;
   color: #64748b;
   font-weight: 500;
-  padding: 0 4px;
+  padding: 0 2px;
 }
 
-.speed-option-btn {
+.speed-real-btn {
   background: transparent;
   border: none;
   border-radius: 6px;
-  padding: 5px 10px;
-  font-size: 12.5px;
+  padding: 4px 9px;
+  font-size: 12px;
   font-weight: 600;
   color: #475569;
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-.speed-option-btn:hover {
+.speed-real-btn:hover {
   color: #0f172a;
+  background: #f1f5f9;
 }
 
-.speed-option-btn.selected {
+.speed-real-btn.selected {
   background: #eff6ff;
   color: #1d4ed8;
   font-weight: 700;
+}
+
+.speed-range-slider {
+  width: 104px;
+  accent-color: #2563eb;
+  cursor: pointer;
+  margin: 0;
+}
+
+.speed-number-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f8fafc;
+  border: 1px solid var(--border-medium);
+  border-radius: 6px;
+  padding: 2px 6px;
+}
+
+.speed-number-input {
+  width: 38px;
+  border: none;
+  background: transparent;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: center;
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+.speed-number-input::-webkit-inner-spin-button,
+.speed-number-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.speed-unit-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
 }
 
 /* 3. MAIN LEARNING WORKSPACE */
@@ -293,7 +349,12 @@
   border: 1px solid transparent;
   border-radius: 999px;
   padding: 5px 12px;
-  white-space: nowrap;
+  max-width: 100%;
+  height: auto;
+  min-height: fit-content;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .active-stage-chip.neutral {
@@ -306,19 +367,37 @@
 .heart-canvas-box {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  gap: 8px;
   background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
   border: 1px solid #f1f5f9;
   border-radius: 12px;
-  padding: 8px;
+  padding: 10px 12px;
 }
 
 .heart-clean-svg {
   width: 100%;
   height: auto;
-  max-height: 390px;
+  max-height: 450px;
   display: block;
+}
+
+.heart-vector-badge {
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 5px 14px;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
+  height: auto;
+  min-height: fit-content;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .clickable-anatomy,
@@ -347,6 +426,11 @@
   font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
+  max-width: 100%;
+  height: auto;
+  min-height: fit-content;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   transition: all 0.15s ease;
 }
 
@@ -372,6 +456,9 @@
   font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
+  max-width: 100%;
+  height: auto;
+  min-height: fit-content;
 }
 
 /* LEAD POSITION PANEL */
@@ -449,6 +536,10 @@
   background-color: #ffffff;
   border: 1px solid var(--border-subtle);
   color: #334155;
+  height: auto;
+  min-height: fit-content;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .impact-rule-pill.positive {
@@ -471,6 +562,10 @@
   padding: 8px 12px;
   font-size: 12.5px;
   line-height: 1.45;
+  height: auto;
+  min-height: fit-content;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .ecg-comparison-legend {
@@ -513,18 +608,78 @@
 .ecg-single-canvas-box {
   flex: 1;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
   border: 1px solid #f5c2c7;
   border-radius: 12px;
   overflow: hidden;
   background-color: #fffdfd;
 }
 
+.ecg-canvas-top-bar,
+.ecg-canvas-bottom-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 6px 10px;
+  background-color: rgba(255, 253, 253, 0.96);
+}
+
+.ecg-canvas-top-bar {
+  border-bottom: 1px solid rgba(245, 194, 199, 0.45);
+}
+
+.ecg-canvas-bottom-bar {
+  border-top: 1px solid rgba(245, 194, 199, 0.45);
+}
+
+.ecg-stage-badge {
+  width: fit-content;
+  max-width: 100%;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 4px 13px;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
+  height: auto;
+  min-height: fit-content;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.ecg-stage-badge.neutral {
+  background-color: #ffffff;
+  border-color: #cbd5e1;
+  border-width: 1.2px;
+  color: #475569;
+  font-weight: 600;
+}
+
+.ecg-metric-badge {
+  width: fit-content;
+  max-width: 100%;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 4px 13px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #334155;
+  line-height: 1.4;
+  text-align: center;
+  height: auto;
+  min-height: fit-content;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .ecg-single-svg {
   width: 100%;
   height: auto;
-  max-height: 390px;
+  max-height: 410px;
   display: block;
 }
 
@@ -539,6 +694,10 @@
   border-radius: 9px;
   padding: 10px 14px;
   line-height: 1.5;
+  height: auto;
+  min-height: fit-content;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* 4. BOTTOM SEQUENTIAL 4-STAGE PROCESS CARDS */
@@ -598,6 +757,9 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  height: auto;
+  min-height: fit-content;
+  min-width: 0;
   cursor: pointer;
   transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease,
     transform 0.15s ease;
@@ -616,6 +778,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -625,11 +788,18 @@
   padding: 3px 10px;
   border-radius: 999px;
   letter-spacing: 0.2px;
+  height: auto;
+  min-height: fit-content;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .stage-active-indicator {
   font-size: 12px;
   font-weight: 700;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .stage-flow-heading {
@@ -637,6 +807,8 @@
   font-weight: 700;
   color: #0f172a;
   line-height: 1.38;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .flow-arrow {
@@ -661,6 +833,8 @@
   font-size: 13.5px;
   color: #334155;
   line-height: 1.55;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .stage-lead-note {
@@ -670,6 +844,8 @@
   font-size: 12.5px;
   color: #1e293b;
   line-height: 1.45;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* 5. CLEAN FOOTER DISCLAIMER & TEXTBOOK REFERENCES */

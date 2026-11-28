@@ -6,11 +6,11 @@ import { SingleLeadViewer } from './components/SingleLeadViewer';
 import type { EcgCondition, LeadId, StageId } from './data/ecgConditions';
 import { ECG_DOMAINS, STAGE_IDS } from './data/ecgConditions';
 import {
+  ECG_STRIP_DURATION_MS,
+  getBeatStageWindows,
   getStageAtCycleProgress,
-  getStageProgressRange,
+  getStripStageWindowMs,
 } from './utils/ecgWaveform';
-
-type SpeedMode = 'real' | 'slow';
 
 function App() {
   const [selectedDomainId, setSelectedDomainId] = useState<string>(ECG_DOMAINS[0].id);
@@ -29,27 +29,42 @@ function App() {
     activeCondition?.defaultLead ?? 'II',
   );
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
-  const [speedMode, setSpeedMode] = useState<SpeedMode>('slow');
-  const [cycleProgress, setCycleProgress] = useState<number>(0.12);
+  const [cycleSecondsSetting, setCycleSecondsSetting] = useState<number>(0);
+  const [durationInputDraft, setDurationInputDraft] = useState<string>('');
+  const [stripTimeMs, setStripTimeMs] = useState<number>(110);
   const [loopStage, setLoopStage] = useState<StageId | null>(null);
+  const [loopBeatIndex, setLoopBeatIndex] = useState<number | undefined>(undefined);
 
   const currentLeadParams = activeCondition
     ? activeCondition.leads[selectedLead].params
     : null;
 
-  // Durasi 1 siklus: "1x (Real)" (~0.8 detik pada 75 bpm) atau "Lambat (20s)" (20 detik per siklus)
-  const cycleDurationSeconds =
-    activeCondition && speedMode === 'real' ? 60 / activeCondition.heartRateBpm : 20;
+  const currentBeatWindows =
+    activeCondition && currentLeadParams
+      ? getBeatStageWindows(currentLeadParams, activeCondition.heartRateBpm)
+      : null;
+
+  const cycleProgress = currentBeatWindows
+    ? (stripTimeMs % currentBeatWindows.cycleMs) / currentBeatWindows.cycleMs
+    : 0;
 
   useEffect(() => {
-    if (!isPlaying || !activeCondition || !currentLeadParams) return;
+    if (!isPlaying || !activeCondition || !currentLeadParams || !currentBeatWindows) return;
 
-    const stageRange =
+    const safeSec =
+      cycleSecondsSetting <= 0 ? 0 : Math.min(30, Math.max(1, cycleSecondsSetting));
+    const msPerSec =
+      safeSec === 0 ? 1000 : currentBeatWindows.cycleMs / safeSec;
+
+    const stageWindow =
       loopStage !== null
-        ? getStageProgressRange(
+        ? getStripStageWindowMs(
             currentLeadParams,
             activeCondition.heartRateBpm,
+            0,
             loopStage,
+            ECG_STRIP_DURATION_MS,
+            loopBeatIndex ?? 0,
           )
         : null;
 
@@ -59,15 +74,15 @@ function App() {
     const animate = (now: number) => {
       if (prevTime !== null) {
         const dtSec = Math.min(0.1, (now - prevTime) / 1000);
-        const delta = dtSec / cycleDurationSeconds;
-        setCycleProgress((prev) => {
-          if (stageRange) {
-            const span = Math.max(0.005, stageRange.endProgress - stageRange.startProgress);
+        const deltaMs = dtSec * msPerSec;
+        setStripTimeMs((prev) => {
+          if (stageWindow) {
+            const span = Math.max(8, stageWindow.endMs - stageWindow.startMs);
             const offset =
-              (((prev - stageRange.startProgress + delta) % span) + span) % span;
-            return stageRange.startProgress + offset;
+              (((prev - stageWindow.startMs + deltaMs) % span) + span) % span;
+            return stageWindow.startMs + offset;
           }
-          return (prev + delta) % 1;
+          return (prev + deltaMs) % ECG_STRIP_DURATION_MS;
         });
       }
       prevTime = now;
@@ -76,7 +91,63 @@ function App() {
 
     rafId = window.requestAnimationFrame(animate);
     return () => window.cancelAnimationFrame(rafId);
-  }, [isPlaying, cycleDurationSeconds, activeCondition, currentLeadParams, loopStage]);
+  }, [
+    isPlaying,
+    cycleSecondsSetting,
+    activeCondition,
+    currentLeadParams,
+    currentBeatWindows,
+    loopStage,
+    loopBeatIndex,
+  ]);
+
+  const handleSelectRealSpeed = () => {
+    setCycleSecondsSetting(0);
+    setDurationInputDraft('');
+  };
+
+  const handleSliderChange = (rawVal: number) => {
+    if (rawVal <= 0) {
+      handleSelectRealSpeed();
+      return;
+    }
+    const clamped = Math.min(30, Math.max(1, Math.round(rawVal)));
+    setCycleSecondsSetting(clamped);
+    setDurationInputDraft(String(clamped));
+  };
+
+  const handleDurationInputChange = (rawStr: string) => {
+    if (rawStr.trim() === '') {
+      setDurationInputDraft('');
+      return;
+    }
+    const parsed = Number(rawStr);
+    if (!Number.isFinite(parsed)) return;
+    if (parsed > 30) {
+      setCycleSecondsSetting(30);
+      setDurationInputDraft('30');
+    } else if (parsed < 1) {
+      setCycleSecondsSetting(1);
+      setDurationInputDraft('1');
+    } else {
+      const clamped = Math.min(30, Math.max(1, Math.round(parsed)));
+      setCycleSecondsSetting(clamped);
+      setDurationInputDraft(String(clamped));
+    }
+  };
+
+  const handleDurationInputBlur = () => {
+    if (durationInputDraft.trim() === '') {
+      setDurationInputDraft(cycleSecondsSetting === 0 ? '' : String(cycleSecondsSetting));
+      return;
+    }
+    const parsed = Number(durationInputDraft);
+    const clamped = Number.isFinite(parsed)
+      ? Math.min(30, Math.max(1, Math.round(parsed)))
+      : 1;
+    setCycleSecondsSetting(clamped);
+    setDurationInputDraft(String(clamped));
+  };
 
   const computedLiveStage =
     activeCondition && currentLeadParams
@@ -94,10 +165,19 @@ function App() {
     setSelectedLead(cond.defaultLead);
     if (loopStage !== null) {
       const nextParams = cond.leads[cond.defaultLead].params;
-      const range = getStageProgressRange(nextParams, cond.heartRateBpm, loopStage);
-      setCycleProgress(range.startProgress);
+      const win = getStripStageWindowMs(
+        nextParams,
+        cond.heartRateBpm,
+        0,
+        loopStage,
+        ECG_STRIP_DURATION_MS,
+        0,
+      );
+      setLoopBeatIndex(win.beatIndex);
+      setStripTimeMs(win.startMs);
     } else {
-      setCycleProgress(0.12);
+      setLoopBeatIndex(undefined);
+      setStripTimeMs(110);
     }
     setIsPlaying(true);
   };
@@ -112,6 +192,7 @@ function App() {
     } else {
       setActiveConditionId('');
       setLoopStage(null);
+      setLoopBeatIndex(undefined);
       setIsPlaying(false);
     }
   };
@@ -122,22 +203,26 @@ function App() {
     applyCondition(nextCond);
   };
 
-  const handleSelectStage = (stageId: StageId) => {
+  const handleSelectStage = (stageId: StageId, preferredBeatIndex?: number) => {
     if (!activeCondition || !currentLeadParams) return;
-    const range = getStageProgressRange(
+    const win = getStripStageWindowMs(
       currentLeadParams,
       activeCondition.heartRateBpm,
+      stripTimeMs,
       stageId,
+      ECG_STRIP_DURATION_MS,
+      preferredBeatIndex,
     );
     setLoopStage(stageId);
-    setCycleProgress(range.startProgress);
+    setLoopBeatIndex(win.beatIndex);
+    setStripTimeMs(win.startMs);
     setIsPlaying(true);
   };
 
   const handleSelectAllCycles = () => {
     if (!activeCondition) return;
     setLoopStage(null);
-    setCycleProgress(0);
+    setLoopBeatIndex(undefined);
     setIsPlaying(true);
   };
 
@@ -283,24 +368,42 @@ function App() {
             })}
           </div>
 
-          <div className="speed-picker" role="group" aria-label="Mode kecepatan siklus jantung">
+          <div className="speed-picker" role="group" aria-label="Kontrol kecepatan siklus jantung">
             <span className="speed-caption">Kecepatan:</span>
             <button
               type="button"
-              className={`speed-option-btn ${speedMode === 'real' ? 'selected' : ''}`}
-              onClick={() => setSpeedMode('real')}
+              className={`speed-real-btn ${cycleSecondsSetting === 0 ? 'selected' : ''}`}
+              onClick={handleSelectRealSpeed}
               title={`Ritme nyata (~${(60 / activeCondition.heartRateBpm).toFixed(1)} detik per siklus)`}
             >
               1x (Real)
             </button>
-            <button
-              type="button"
-              className={`speed-option-btn ${speedMode === 'slow' ? 'selected' : ''}`}
-              onClick={() => setSpeedMode('slow')}
-              title="Mode belajar: 1 siklus penuh selama 20 detik"
-            >
-              Lambat (20s)
-            </button>
+            <input
+              type="range"
+              className="speed-range-slider"
+              min={0}
+              max={30}
+              step={1}
+              value={cycleSecondsSetting}
+              aria-label="Geser durasi satu siklus jantung dari 1x Real hingga 30 detik"
+              onChange={(e) => handleSliderChange(Number(e.target.value))}
+            />
+            <div className="speed-number-group">
+              <input
+                type="number"
+                className="speed-number-input"
+                min={1}
+                max={30}
+                step={1}
+                inputMode="numeric"
+                placeholder="1x"
+                value={durationInputDraft}
+                aria-label="Ketik durasi siklus dalam detik (1 hingga 30 detik)"
+                onChange={(e) => handleDurationInputChange(e.target.value)}
+                onBlur={handleDurationInputBlur}
+              />
+              <span className="speed-unit-label">s</span>
+            </div>
           </div>
         </section>
       )}
@@ -323,7 +426,7 @@ function App() {
                 selectedLead={selectedLead}
                 onSelectLead={setSelectedLead}
                 activeStage={activeStage}
-                cycleProgress={cycleProgress}
+                stripTimeMs={stripTimeMs}
                 onSelectStage={handleSelectStage}
               />
             </div>

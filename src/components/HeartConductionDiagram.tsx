@@ -38,54 +38,54 @@ const EXTERIOR_CALLOUTS: ExteriorCallout[] = [
     id: 'sa-node',
     label: 'SA Node',
     side: 'left',
-    labelX: 144,
-    labelY: 96,
-    elbowX: 174,
-    targetX: 222,
-    targetY: 112,
+    labelX: 132,
+    labelY: 78,
+    elbowX: 156,
+    targetX: 211,
+    targetY: 87,
     clickStage: 1,
   },
   {
     id: 'right-atrium',
     label: 'Atrium Kanan',
     side: 'left',
-    labelX: 144,
-    labelY: 150,
-    elbowX: 172,
-    targetX: 204,
-    targetY: 150,
+    labelX: 132,
+    labelY: 138,
+    elbowX: 154,
+    targetX: 190,
+    targetY: 132,
     clickStage: 1,
   },
   {
     id: 'av-node',
     label: 'AV Node',
     side: 'left',
-    labelX: 144,
-    labelY: 204,
-    elbowX: 214,
-    targetX: 270,
-    targetY: 188,
+    labelX: 132,
+    labelY: 198,
+    elbowX: 198,
+    targetX: 275,
+    targetY: 174,
     clickStage: 2,
   },
   {
     id: 'rbb',
     label: 'Cabang Kanan (RBB)',
     side: 'left',
-    labelX: 144,
-    labelY: 260,
-    elbowX: 222,
-    targetX: 279,
-    targetY: 274,
+    labelX: 132,
+    labelY: 262,
+    elbowX: 206,
+    targetX: 278,
+    targetY: 278,
     clickStage: 3,
   },
   {
     id: 'right-ventricle',
     label: 'Ventrikel Kanan',
     side: 'left',
-    labelX: 144,
-    labelY: 318,
-    elbowX: 176,
-    targetX: 212,
+    labelX: 132,
+    labelY: 326,
+    elbowX: 158,
+    targetX: 199,
     targetY: 314,
     clickStage: 3,
   },
@@ -95,32 +95,32 @@ const EXTERIOR_CALLOUTS: ExteriorCallout[] = [
     id: 'left-atrium',
     label: 'Atrium Kiri',
     side: 'right',
-    labelX: 456,
-    labelY: 102,
-    elbowX: 418,
-    targetX: 368,
-    targetY: 132,
+    labelX: 448,
+    labelY: 82,
+    elbowX: 424,
+    targetX: 383,
+    targetY: 111,
     clickStage: 1,
   },
   {
     id: 'his-bundle',
     label: 'Bundle of His',
     side: 'right',
-    labelX: 456,
-    labelY: 156,
-    elbowX: 404,
-    targetX: 288,
-    targetY: 210,
+    labelX: 448,
+    labelY: 144,
+    elbowX: 412,
+    targetX: 289,
+    targetY: 203,
     clickStage: 2,
   },
   {
     id: 'lbb',
     label: 'Cabang Kiri (LBB)',
     side: 'right',
-    labelX: 456,
-    labelY: 210,
-    elbowX: 406,
-    targetX: 294,
+    labelX: 448,
+    labelY: 208,
+    elbowX: 414,
+    targetX: 296,
     targetY: 250,
     clickStage: 3,
   },
@@ -128,22 +128,22 @@ const EXTERIOR_CALLOUTS: ExteriorCallout[] = [
     id: 'purkinje',
     label: 'Serabut Purkinje',
     side: 'right',
-    labelX: 456,
-    labelY: 266,
-    elbowX: 416,
-    targetX: 374,
-    targetY: 288,
+    labelX: 448,
+    labelY: 272,
+    elbowX: 424,
+    targetX: 391,
+    targetY: 295,
     clickStage: 3,
   },
   {
     id: 'left-ventricle',
     label: 'Ventrikel Kiri',
     side: 'right',
-    labelX: 456,
-    labelY: 324,
-    elbowX: 420,
-    targetX: 378,
-    targetY: 324,
+    labelX: 448,
+    labelY: 334,
+    elbowX: 426,
+    targetX: 395,
+    targetY: 337,
     clickStage: 4,
   },
 ];
@@ -211,16 +211,28 @@ function ProgressiveTractPath({
         strokeLinecap="round"
       />
       {showActive && (
-        <path
-          d={d}
-          pathLength={100}
-          fill="none"
-          stroke={activeColor}
-          strokeWidth={activeStrokeWidth}
-          strokeDasharray={`${dashLength} 110`}
-          strokeLinecap="round"
-          opacity={intensity}
-        />
+        <>
+          <path
+            d={d}
+            pathLength={100}
+            fill="none"
+            stroke="#ffffff"
+            strokeWidth={activeStrokeWidth + 2.4}
+            strokeDasharray={`${dashLength} 110`}
+            strokeLinecap="round"
+            opacity={intensity * 0.82}
+          />
+          <path
+            d={d}
+            pathLength={100}
+            fill="none"
+            stroke={activeColor}
+            strokeWidth={activeStrokeWidth}
+            strokeDasharray={`${dashLength} 110`}
+            strokeLinecap="round"
+            opacity={intensity}
+          />
+        </>
       )}
       {showSpark && (
         <path
@@ -303,7 +315,7 @@ export function HeartConductionDiagram({
 
       <div className="heart-canvas-box">
         <svg
-          viewBox="0 0 600 424"
+          viewBox="0 0 580 404"
           className="heart-clean-svg"
           role="img"
           aria-label="Diagram skematik konduksi jantung dengan garis penunjuk anatomi luar"
@@ -390,8 +402,8 @@ export function HeartConductionDiagram({
             </marker>
           </defs>
 
-          {/* SILUET JANTUNG DI TENGAH (x: 185..405, y: 76..366) */}
-          <g transform="translate(10, 0)">
+          {/* SILUET JANTUNG DIPERBESAR DI TENGAH */}
+          <g transform="translate(-39, -45) scale(1.18)">
             {/* Muara Vena Cava Superior */}
             <path
               d="M 196 48 L 196 84 M 220 48 L 220 80"
@@ -405,9 +417,11 @@ export function HeartConductionDiagram({
             <path
               d={RA_PATH}
               fill={
-                condition.hypertrophyZone === 'right-atrium'
-                  ? 'rgba(37, 99, 235, 0.08)'
-                  : '#f8fafc'
+                prop.raWave.intensity > 0.15
+                  ? 'rgba(37, 99, 235, 0.09)'
+                  : condition.hypertrophyZone === 'right-atrium'
+                    ? 'rgba(37, 99, 235, 0.08)'
+                    : '#f8fafc'
               }
               className="clickable-anatomy"
               onClick={() => onSelectStage(1)}
@@ -418,16 +432,16 @@ export function HeartConductionDiagram({
                   cx={prop.raWave.originX}
                   cy={prop.raWave.originY}
                   r={prop.raWave.spread * prop.raWave.maxRadius}
-                  fill={`rgba(37, 99, 235, ${0.24 * prop.raWave.intensity})`}
+                  fill={`rgba(37, 99, 235, ${0.33 * prop.raWave.intensity})`}
                 />
                 <circle
                   cx={prop.raWave.originX}
                   cy={prop.raWave.originY}
                   r={prop.raWave.spread * prop.raWave.maxRadius}
                   fill="none"
-                  stroke="#3b82f6"
-                  strokeWidth="2.4"
-                  opacity={prop.raWave.intensity * (1 - prop.raWave.spread * 0.5)}
+                  stroke="#2563eb"
+                  strokeWidth="2.6"
+                  opacity={prop.raWave.intensity * (1 - prop.raWave.spread * 0.45)}
                 />
               </g>
             )}
@@ -441,10 +455,10 @@ export function HeartConductionDiagram({
               }
               strokeWidth={
                 prop.raWave.intensity > 0.15
-                  ? 2.8
+                  ? 3
                   : condition.hypertrophyZone === 'right-atrium'
                     ? 2.2
-                    : 1.8
+                    : 1.7
               }
               filter={
                 prop.raWave.intensity > 0.25 &&
@@ -458,9 +472,11 @@ export function HeartConductionDiagram({
             <path
               d={LA_PATH}
               fill={
-                condition.hypertrophyZone === 'left-atrium'
-                  ? 'rgba(37, 99, 235, 0.08)'
-                  : '#f8fafc'
+                prop.laWave.intensity > 0.15
+                  ? 'rgba(37, 99, 235, 0.09)'
+                  : condition.hypertrophyZone === 'left-atrium'
+                    ? 'rgba(37, 99, 235, 0.08)'
+                    : '#f8fafc'
               }
               className="clickable-anatomy"
               onClick={() => onSelectStage(1)}
@@ -471,16 +487,16 @@ export function HeartConductionDiagram({
                   cx={prop.laWave.originX}
                   cy={prop.laWave.originY}
                   r={prop.laWave.spread * prop.laWave.maxRadius}
-                  fill={`rgba(37, 99, 235, ${0.24 * prop.laWave.intensity})`}
+                  fill={`rgba(37, 99, 235, ${0.33 * prop.laWave.intensity})`}
                 />
                 <circle
                   cx={prop.laWave.originX}
                   cy={prop.laWave.originY}
                   r={prop.laWave.spread * prop.laWave.maxRadius}
                   fill="none"
-                  stroke="#3b82f6"
-                  strokeWidth="2.4"
-                  opacity={prop.laWave.intensity * (1 - prop.laWave.spread * 0.5)}
+                  stroke="#2563eb"
+                  strokeWidth="2.6"
+                  opacity={prop.laWave.intensity * (1 - prop.laWave.spread * 0.45)}
                 />
               </g>
             )}
@@ -494,10 +510,10 @@ export function HeartConductionDiagram({
               }
               strokeWidth={
                 prop.laWave.intensity > 0.15
-                  ? 2.8
+                  ? 3
                   : condition.hypertrophyZone === 'left-atrium'
                     ? 2.2
-                    : 1.8
+                    : 1.7
               }
               filter={
                 prop.laWave.intensity > 0.25 &&
@@ -552,7 +568,7 @@ export function HeartConductionDiagram({
                       cx={prop.lvWave.originX}
                       cy={prop.lvWave.originY}
                       r={prop.lvWave.spread * prop.lvWave.maxRadius}
-                      fill={`rgba(220, 38, 38, ${0.25 * prop.lvWave.intensity})`}
+                      fill={`rgba(220, 38, 38, ${0.33 * prop.lvWave.intensity})`}
                     />
                     <circle
                       cx={prop.lvWave.originX}
@@ -560,9 +576,9 @@ export function HeartConductionDiagram({
                       r={prop.lvWave.spread * prop.lvWave.maxRadius}
                       fill="none"
                       stroke={prop.lvWave.isSlowSpread ? '#ea580c' : '#dc2626'}
-                      strokeWidth={prop.lvWave.isSlowSpread ? 2.6 : 2.2}
+                      strokeWidth={prop.lvWave.isSlowSpread ? 2.8 : 2.4}
                       strokeDasharray={prop.lvWave.isSlowSpread ? '5 4' : undefined}
-                      opacity={prop.lvWave.intensity * (1 - prop.lvWave.spread * 0.4)}
+                      opacity={prop.lvWave.intensity * (1 - prop.lvWave.spread * 0.35)}
                     />
                   </g>
                 )}
@@ -576,8 +592,8 @@ export function HeartConductionDiagram({
                       r={prop.rvWave.spread * prop.rvWave.maxRadius}
                       fill={
                         prop.rvWave.isSlowSpread
-                          ? `rgba(234, 88, 12, ${0.24 * prop.rvWave.intensity})`
-                          : `rgba(220, 38, 38, ${0.24 * prop.rvWave.intensity})`
+                          ? `rgba(234, 88, 12, ${0.33 * prop.rvWave.intensity})`
+                          : `rgba(220, 38, 38, ${0.33 * prop.rvWave.intensity})`
                       }
                     />
                     <circle
@@ -586,9 +602,9 @@ export function HeartConductionDiagram({
                       r={prop.rvWave.spread * prop.rvWave.maxRadius}
                       fill="none"
                       stroke={prop.rvWave.isSlowSpread ? '#ea580c' : '#dc2626'}
-                      strokeWidth={prop.rvWave.isSlowSpread ? 2.8 : 2.2}
+                      strokeWidth={prop.rvWave.isSlowSpread ? 3 : 2.4}
                       strokeDasharray={prop.rvWave.isSlowSpread ? '5 4' : undefined}
-                      opacity={prop.rvWave.intensity * (1 - prop.rvWave.spread * 0.35)}
+                      opacity={prop.rvWave.intensity * (1 - prop.rvWave.spread * 0.32)}
                     />
                     {prop.rvWave.isSlowSpread && prop.rvWave.spread > 0.25 && (
                       <circle
@@ -597,9 +613,9 @@ export function HeartConductionDiagram({
                         r={prop.rvWave.spread * prop.rvWave.maxRadius * 0.62}
                         fill="none"
                         stroke="#f97316"
-                        strokeWidth="1.8"
+                        strokeWidth="1.9"
                         strokeDasharray="4 4"
-                        opacity={prop.rvWave.intensity * 0.65}
+                        opacity={prop.rvWave.intensity * 0.72}
                       />
                     )}
                   </g>
@@ -612,7 +628,7 @@ export function HeartConductionDiagram({
                     y="195"
                     width="260"
                     height="185"
-                    fill={`rgba(16, 185, 129, ${0.13 * prop.stPlateauIntensity})`}
+                    fill={`rgba(16, 185, 129, ${0.18 * prop.stPlateauIntensity})`}
                   />
                 )}
 
@@ -623,7 +639,7 @@ export function HeartConductionDiagram({
                       cx="306"
                       cy="358"
                       r={prop.repolProgress * 205}
-                      fill={`rgba(5, 150, 105, ${0.24 * prop.repolIntensity})`}
+                      fill={`rgba(5, 150, 105, ${0.32 * prop.repolIntensity})`}
                     />
                     <circle
                       cx="306"
@@ -631,8 +647,8 @@ export function HeartConductionDiagram({
                       r={prop.repolProgress * 205}
                       fill="none"
                       stroke="#059669"
-                      strokeWidth="2.4"
-                      opacity={prop.repolIntensity * (1 - prop.repolProgress * 0.45)}
+                      strokeWidth="2.6"
+                      opacity={prop.repolIntensity * (1 - prop.repolProgress * 0.4)}
                     />
                   </>
                 )}
@@ -652,11 +668,11 @@ export function HeartConductionDiagram({
                 }
                 strokeWidth={
                   ventLit
-                    ? 2.6
+                    ? 3
                     : condition.hypertrophyZone === 'left-ventricle' ||
                         condition.hypertrophyZone === 'right-ventricle'
                       ? 2.2
-                      : 1.8
+                      : 1.7
                 }
                 filter={ventLit ? 'url(#part-glow)' : undefined}
               />
@@ -1124,21 +1140,21 @@ export function HeartConductionDiagram({
                   points={`${startLineX},${lineY} ${item.elbowX},${lineY} ${item.targetX},${item.targetY}`}
                   fill="none"
                   stroke={active ? stageAccent : '#cbd5e1'}
-                  strokeWidth={active ? 1.6 : 1}
-                  opacity={active ? 0.95 : 0.65}
+                  strokeWidth={active ? 2 : 1.05}
+                  opacity={active ? 0.98 : 0.68}
                 />
                 <circle
                   cx={item.targetX}
                   cy={item.targetY}
-                  r={active ? 3.2 : 2.2}
+                  r={active ? 3.8 : 2.3}
                   fill={active ? stageAccent : '#94a3b8'}
                 />
                 <text
                   x={item.labelX}
                   y={item.labelY}
                   textAnchor={item.side === 'left' ? 'end' : 'start'}
-                  fontSize="11.5"
-                  fontWeight={active ? '700' : '500'}
+                  fontSize={active ? '12' : '11.5'}
+                  fontWeight={active ? '800' : '500'}
                   fill={active ? stageAccent : '#64748b'}
                 >
                   {item.label}
@@ -1146,32 +1162,21 @@ export function HeartConductionDiagram({
               </g>
             );
           })}
-
-          {/* KETERANGAN VEKTOR TERPISAH RAPI DI BAWAH APEKS JANTUNG */}
-          {legendVectors.length > 0 && (
-            <g transform="translate(300, 402)" pointerEvents="none">
-              <rect
-                x="-195"
-                y="-15"
-                width="390"
-                height="24"
-                rx="12"
-                fill={stageMeta?.softBg ?? '#f8fafc'}
-                stroke={stageMeta ? `${stageMeta.accentColor}55` : '#cbd5e1'}
-              />
-              <text
-                x="0"
-                y="1"
-                textAnchor="middle"
-                fontSize="11"
-                fontWeight="700"
-                fill={stageMeta?.accentColor ?? '#334155'}
-              >
-                Arah Vektor Aktif: {legendVectors.map((v) => v.label).join('  •  ')}
-              </text>
-            </g>
-          )}
         </svg>
+
+        {/* KETERANGAN VEKTOR TERPISAH RAPI (AUTO-WRAPPING ROUNDED BADGE) */}
+        {legendVectors.length > 0 && (
+          <div
+            className="heart-vector-badge"
+            style={{
+              backgroundColor: stageMeta?.softBg ?? '#f8fafc',
+              borderColor: stageMeta ? `${stageMeta.accentColor}55` : '#cbd5e1',
+              color: stageMeta?.accentColor ?? '#334155',
+            }}
+          >
+            Arah Vektor Aktif: {legendVectors.map((v) => v.label).join('  •  ')}
+          </div>
+        )}
       </div>
 
       <p className="visual-footer-caption">
