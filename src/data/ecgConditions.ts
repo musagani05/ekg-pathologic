@@ -1,4 +1,4 @@
-export type LeadId =
+﻿export type LeadId =
   | 'I'
   | 'II'
   | 'III'
@@ -33,15 +33,25 @@ export type ConductionPartId =
   | 'right-ventricle'
   | 'left-ventricle';
 
+export type BlockedConductionTarget = 'av-node' | 'av-reentry' | 'rbb' | 'lbb';
+
+export type IschemicZoneTarget = 'anterior-lv' | 'inferior' | 'subendocardial-lv';
+
+export type HypertrophyZoneTarget = 'right-atrium' | 'left-atrium';
+
 export interface LeadWaveParams {
   pAmpMv: number;
   pTerminalAmpMv?: number;
+  pInitialRatio?: number;
   pDurationMs: number;
+  pSharpness?: 'normal' | 'peaked';
+  pNotched?: boolean;
   prIntervalMs: number;
   qAmpMv: number;
   qDurationMs?: number;
   rAmpMv: number;
   rDurationMs?: number;
+  rNotched?: boolean;
   sAmpMv: number;
   sDurationMs?: number;
   rPrimeAmpMv?: number;
@@ -50,7 +60,9 @@ export interface LeadWaveParams {
   stMorphology?: 'flat' | 'concave' | 'convex' | 'downsloping' | 'upsloping';
   tAmpMv: number;
   tDurationMs: number;
+  tSharpness?: 'normal' | 'peaked';
   qtIntervalMs: number;
+  uAmpMv?: number;
 }
 
 export interface LeadPerspective {
@@ -90,12 +102,24 @@ export interface ProcessStageDetail {
 
 export interface EcgCondition {
   id: string;
+  domainId: string;
+  domainName: string;
   name: string;
   noteReferencePath: string;
   heartRateBpm: number;
   defaultLead: LeadId;
+  isNormalBaseline?: boolean;
+  blockedTarget?: BlockedConductionTarget;
+  ischemicZone?: IschemicZoneTarget;
+  hypertrophyZone?: HypertrophyZoneTarget;
   stages: Record<StageId, ProcessStageDetail>;
   leads: Record<LeadId, LeadPerspective>;
+}
+
+export interface EcgDomain {
+  id: string;
+  name: string;
+  conditions: EcgCondition[];
 }
 
 export const ALL_LEAD_IDS: LeadId[] = [
@@ -117,10 +141,13 @@ export const STAGE_IDS: StageId[] = [1, 2, 3, 4];
 
 export const NORMAL_SINUS_CONDITION: EcgCondition = {
   id: 'normal-sinus-rhythm',
-  name: 'Normal Sinus Rhythm & Fisiologi Normal',
+  domainId: 'fisiologi-normal',
+  domainName: 'Fisiologi Normal',
+  name: 'Normal Sinus Rhythm',
   noteReferencePath: 'src/notes/01-normal-sinus-rhythm.md',
   heartRateBpm: 75,
   defaultLead: 'II',
+  isNormalBaseline: true,
 
   stages: {
     1: {
@@ -588,4 +615,332 @@ export const NORMAL_SINUS_CONDITION: EcgCondition = {
   },
 };
 
-export const ECG_CONDITIONS: EcgCondition[] = [NORMAL_SINUS_CONDITION];
+type LeadOverrideMap = Partial<
+  Record<
+    LeadId,
+    {
+      params?: Partial<LeadWaveParams>;
+      stageNotes?: Partial<Record<StageId, string>>;
+    }
+  >
+>;
+
+/**
+ * Helper modular untuk menurunkan seluruh 12-lead kondisi patofisiologis dari baseline normal,
+ * sehingga perubahan lead mana pun tetap lengkap dan akurat saat pengguna berpindah perspektif.
+ */
+function buildDerivedLeads(
+  overrides: LeadOverrideMap,
+  globalParamPatch?: Partial<LeadWaveParams>,
+  globalStageNotes?: Partial<Record<StageId, string>>,
+): Record<LeadId, LeadPerspective> {
+  const result = {} as Record<LeadId, LeadPerspective>;
+
+  for (const leadId of ALL_LEAD_IDS) {
+    const baseLead = NORMAL_SINUS_CONDITION.leads[leadId];
+    const leadPatch = overrides[leadId];
+
+    result[leadId] = {
+      ...baseLead,
+      params: {
+        ...baseLead.params,
+        ...(globalParamPatch ?? {}),
+        ...(leadPatch?.params ?? {}),
+      },
+      stageNotes: {
+        ...baseLead.stageNotes,
+        ...(globalStageNotes ?? {}),
+        ...(leadPatch?.stageNotes ?? {}),
+      },
+    };
+  }
+
+  return result;
+}
+
+
+const P_PULMONALE_CONDITION: EcgCondition = {
+  id: 'p-pulmonale',
+  domainId: 'kelainan-aksis-ruang',
+  domainName: 'Kelainan Aksis & Pembesaran Ruang Jantung',
+  name: 'Pembesaran Atrium Kanan (P Pulmonale)',
+  noteReferencePath: 'src/notes/1.1 P Pulmonale.md',
+  heartRateBpm: 75,
+  defaultLead: 'II',
+  hypertrophyZone: 'right-atrium',
+  stages: {
+    1: {
+      ...NORMAL_SINUS_CONDITION.stages[1],
+      activeParts: ['sa-node', 'right-atrium', 'left-atrium'],
+      vectors: [
+        {
+          id: 'vec-rae-dominant',
+          label: 'Vektor Atrium Kanan Membesar (+60° s/d +75°)',
+          x1: 212,
+          y1: 112,
+          x2: 274,
+          y2: 184,
+          color: '#2563eb',
+        },
+      ],
+      heartStatusCaption:
+        'Atrium kanan yang menebal dan berdilatasi menghasilkan vektor depolarisasi besar ke arah inferior-anterior (+60° s/d +75°).',
+      whatHappensInHeart:
+        'SA Node melepaskan impuls yang mendepolarisasi miokardium atrium kanan yang menebal/berdilatasi dengan massa seluler lebih besar, lalu disusul depolarisasi normal atrium kiri.',
+      whyEcgLooksLikeThis:
+        'Voltase atrium kanan melonjak lurus ke arah Lead II sehingga puncak gelombang P melesat tinggi dan lancip (≥ 2,5 mm), namun turun tepat waktu dengan durasi total tetap normal (<0,12 detik).',
+    },
+    2: {
+      ...NORMAL_SINUS_CONDITION.stages[2],
+      heartStatusCaption:
+        'Impuls tiba di AV Node dan mengalami jeda fisiologis normal sebelum masuk ke berkas His.',
+      whatHappensInHeart:
+        'Setelah kedua atrium selesai terdepolarisasi, impuls listrik melintas dan mengalami perlambatan fisiologis normal di AV junction sebelum diteruskan ke berkas His.',
+      whyEcgLooksLikeThis:
+        'Tidak ada perbedaan voltase permukaan yang terdeteksi selama jeda nodus AV, sehingga segmen PR tetap mendatar isoelektrik dengan interval PR normal (0,12–0,20 detik).',
+    },
+    3: {
+      ...NORMAL_SINUS_CONDITION.stages[3],
+      heartStatusCaption:
+        'Sistem His-Purkinje mengaktivasi septum dan kedua ventrikel secara cepat dan sinkron.',
+      whatHappensInHeart:
+        'Impuls meluncur cepat lewat berkas His, RBB, LBB, dan serabut Purkinje, mengaktivasi septum dari kiri ke kanan lalu dinding bebas kedua ventrikel secara serempak.',
+      whyEcgLooksLikeThis:
+        'Terbentuk kompleks QRS berdurasi sempit normal (<0,10 detik) dengan defleksi R dominan positif di Lead II karena aktivitas ventrikel kiri tidak terganggu pada RAE murni.',
+    },
+    4: {
+      ...NORMAL_SINUS_CONDITION.stages[4],
+      heartStatusCaption:
+        'Fase plateau (ST) dan repolarisasi ventrikel (Gel. T) berlangsung normal.',
+      whatHappensInHeart:
+        'Seluruh miosit ventrikel bertahan seragam di fase plateau, kemudian mengalami repolarisasi normal dari lapisan luar (epikardium) ke dalam (endokardium).',
+      whyEcgLooksLikeThis:
+        'Segmen ST tetap datar pada garis isoelektrik, diikuti gelombang T halus positif yang searah (konkordan) dengan kompleks QRS di Lead II.',
+    },
+  },
+  leads: buildDerivedLeads({
+    I: {
+      params: { pAmpMv: 0.14, pDurationMs: 96, pSharpness: 'peaked' },
+      stageNotes: {
+        1: 'Gelombang P sedikit meninggi dan lebih lancip namun perubahan paling mencolok tetap di lead inferior (II, III, aVF).',
+      },
+    },
+    II: {
+      params: { pAmpMv: 0.32, pDurationMs: 100, pSharpness: 'peaked' },
+      stageNotes: {
+        1: 'P Pulmonale klasik: gelombang P tinggi lancip (+0,32 mV ≥ 2,5 mm) dengan durasi tetap normal (<0,12 detik) dibanding kurva acuan normal.',
+      },
+    },
+    III: {
+      params: { pAmpMv: 0.25, pDurationMs: 98, pSharpness: 'peaked' },
+      stageNotes: {
+        1: 'Gelombang P meninggi tajam (+0,25 mV) mengikuti vektor atrium kanan yang lebih vertikal ke arah inferior.',
+      },
+    },
+    aVR: {
+      params: { pAmpMv: -0.24, pDurationMs: 98, pSharpness: 'peaked' },
+      stageNotes: {
+        1: 'Gelombang P negatif lebih dalam dan lancip di aVR karena vektor atrium kanan yang besar bergerak menjauhi bahu kanan.',
+      },
+    },
+    aVL: {
+      params: { pAmpMv: 0.04, pDurationMs: 92 },
+      stageNotes: {
+        1: 'Gelombang P tetap kecil di aVL karena aksis vertikal atrium kanan hampir tegak lurus terhadap sudut −30°.',
+      },
+    },
+    aVF: {
+      params: { pAmpMv: 0.28, pDurationMs: 98, pSharpness: 'peaked' },
+      stageNotes: {
+        1: 'Gelombang P tinggi lancip (+0,28 mV ≥ 2,5 mm) mengonfirmasi pembesaran atrium kanan di aksis inferior.',
+      },
+    },
+    V1: {
+      params: {
+        pAmpMv: 0.2,
+        pTerminalAmpMv: -0.05,
+        pDurationMs: 102,
+        pSharpness: 'peaked',
+      },
+      stageNotes: {
+        1: 'Komponen positif awal P di V1 melonjak (>1,5 mm / +0,20 mV) mencerminkan atrium kanan anterior yang membesar, diikuti komponen negatif akhir normal.',
+      },
+    },
+    V2: {
+      params: { pAmpMv: 0.16, pDurationMs: 98, pSharpness: 'peaked' },
+      stageNotes: {
+        1: 'Gelombang P meninggi di prekordial kanan akibat proyeksi vektor atrium kanan ke arah anterior.',
+      },
+    },
+    V3: {
+      params: { pAmpMv: 0.13, pDurationMs: 96, pSharpness: 'peaked' },
+    },
+    V4: {
+      params: { pAmpMv: 0.12, pDurationMs: 96 },
+    },
+    V5: {
+      params: { pAmpMv: 0.11, pDurationMs: 96 },
+    },
+    V6: {
+      params: { pAmpMv: 0.1, pDurationMs: 94 },
+    },
+  }),
+};
+
+const P_MITRALE_CONDITION: EcgCondition = {
+  id: 'p-mitrale',
+  domainId: 'kelainan-aksis-ruang',
+  domainName: 'Kelainan Aksis & Pembesaran Ruang Jantung',
+  name: 'Pembesaran Atrium Kiri (P Mitrale)',
+  noteReferencePath: 'src/notes/1.2 P Mitrale.md',
+  heartRateBpm: 75,
+  defaultLead: 'V1',
+  hypertrophyZone: 'left-atrium',
+  stages: {
+    1: {
+      ...NORMAL_SINUS_CONDITION.stages[1],
+      activeParts: ['sa-node', 'right-atrium', 'left-atrium'],
+      vectors: [
+        {
+          id: 'vec-lae-terminal',
+          label: 'Vektor Terminal Atrium Kiri (Posterior-Kiri)',
+          x1: 266,
+          y1: 118,
+          x2: 358,
+          y2: 148,
+          color: '#2563eb',
+        },
+      ],
+      heartStatusCaption:
+        'Atrium kiri yang berdilatasi dan melambat menggeser vektor terminal ke posterior-kiri menjauhi V1.',
+      whatHappensInHeart:
+        'SA Node mendepolarisasi atrium kanan secara normal, lalu gelombang listrik menyeberang lebih lambat melalui jalur interatrial yang memanjang pada atrium kiri yang membesar ke arah posterior-kiri.',
+      whyEcgLooksLikeThis:
+        'Di Lead V1, defleksi positif awal kecil disusul gelombang negatif terminal yang lebar (>0,04 dtk) dan dalam (≥1 mm) saat arus menjauh ke belakang. Di Lead II, gelombang P melebar (≥0,12 dtk) dan berlekuk ganda seperti huruf "M" (P mitrale).',
+    },
+    2: {
+      ...NORMAL_SINUS_CONDITION.stages[2],
+      heartStatusCaption:
+        'Impuls melintasi AV Node dengan jeda fisiologis normal sebelum menuju berkas His.',
+      whatHappensInHeart:
+        'Setelah aktivasi atrium kiri selesai, impuls listrik masuk ke AV junction dan mengalami perlambatan fisiologis normal sebelum diteruskan ke berkas His.',
+      whyEcgLooksLikeThis:
+        'Tidak ada beda potensial permukaan yang terukur selama jeda nodus AV, sehingga segmen PR tampak datar isoelektrik dengan interval PR tetap proporsional.',
+    },
+    3: {
+      ...NORMAL_SINUS_CONDITION.stages[3],
+      heartStatusCaption:
+        'Aktivasi ventrikel melalui His-Purkinje berlangsung cepat dan normal.',
+      whatHappensInHeart:
+        'Impuls menyebar cepat lewat berkas His, cabang berkas kanan-kiri, dan serabut Purkinje untuk mengaktivasi septum dari kiri ke kanan lalu kedua ventrikel serempak.',
+      whyEcgLooksLikeThis:
+        'Kompleks QRS tetap berdurasi sempit normal (<0,10 detik) dengan pola rS normal di Lead V1 karena depolarisasi ventrikel tidak terganggu pada LAE murni.',
+    },
+    4: {
+      ...NORMAL_SINUS_CONDITION.stages[4],
+      heartStatusCaption:
+        'Fase plateau (ST) dan repolarisasi ventrikel (Gel. T) berlangsung normal pada LAE terisolasi.',
+      whatHappensInHeart:
+        'Seluruh miosit ventrikel bertahan seragam di fase plateau lalu memulihkan muatan dari epikardium ke endokardium.',
+      whyEcgLooksLikeThis:
+        'Segmen ST datar di garis isoelektrik diikuti gelombang T normal (di V1 gelombang T normalnya datar atau negatif dangkal).',
+    },
+  },
+  leads: buildDerivedLeads(
+    {
+      I: {
+        params: { pAmpMv: 0.14, pDurationMs: 128, pNotched: true },
+        stageNotes: {
+          1: 'Gelombang P melebar (≥0,12 detik) dengan puncak ganda halus (P mitrale) akibat aktivasi atrium kiri yang tertunda.',
+        },
+      },
+      II: {
+        params: { pAmpMv: 0.18, pDurationMs: 132, pNotched: true },
+        stageNotes: {
+          1: 'P Mitrale klasik di Lead II: durasi P melebar (0,13 detik ≥ 0,12 detik) dan berlekuk ganda menyerupai huruf "M" dibanding kurva acuan normal.',
+        },
+      },
+      III: {
+        params: { pAmpMv: 0.08, pDurationMs: 126, pNotched: true },
+      },
+      aVR: {
+        params: { pAmpMv: -0.14, pDurationMs: 128 },
+      },
+      aVL: {
+        params: { pAmpMv: 0.08, pDurationMs: 124, pNotched: true },
+      },
+      aVF: {
+        params: { pAmpMv: 0.13, pDurationMs: 126, pNotched: true },
+      },
+      V1: {
+        params: {
+          pAmpMv: 0.07,
+          pTerminalAmpMv: -0.15,
+          pInitialRatio: 0.36,
+          pDurationMs: 132,
+        },
+        stageNotes: {
+          1: 'Temuan paling sensitif di V1: komponen negatif terminal P melebar (>0,04 dtk) dan dalam (−0,15 mV ≥ 1 mm) saat vektor atrium kiri menjauh ke posterior.',
+        },
+      },
+      V2: {
+        params: { pAmpMv: 0.09, pDurationMs: 126 },
+      },
+      V3: {
+        params: { pAmpMv: 0.1, pDurationMs: 126 },
+      },
+      V4: {
+        params: { pAmpMv: 0.11, pDurationMs: 128, pNotched: true },
+      },
+      V5: {
+        params: { pAmpMv: 0.11, pDurationMs: 128, pNotched: true },
+      },
+      V6: {
+        params: { pAmpMv: 0.1, pDurationMs: 126, pNotched: true },
+      },
+    },
+    { prIntervalMs: 176 },
+  ),
+};
+
+export const ECG_DOMAINS: EcgDomain[] = [
+  {
+    id: 'fisiologi-normal',
+    name: 'Fisiologi Normal',
+    conditions: [NORMAL_SINUS_CONDITION],
+  },
+  {
+    id: 'kelainan-aksis-ruang',
+    name: 'Kelainan Aksis & Pembesaran Ruang Jantung',
+    conditions: [P_PULMONALE_CONDITION, P_MITRALE_CONDITION],
+  },
+  {
+    id: 'konduksi-intraventrikel',
+    name: 'Konduksi Intraventrikel & Pre-eksitasi',
+    conditions: [],
+  },
+  {
+    id: 'iskemia-infark-perikardial',
+    name: 'Iskemia, Infark & Perikardial',
+    conditions: [],
+  },
+  {
+    id: 'bradiaritmia-blok-av',
+    name: 'Bradiaritmia & Blok AV',
+    conditions: [],
+  },
+  {
+    id: 'takiaritmia',
+    name: 'Takiaritmia',
+    conditions: [],
+  },
+  {
+    id: 'metabolik-obat-pacemaker',
+    name: 'Metabolik, Obat & Pacemaker',
+    conditions: [],
+  },
+];
+
+export const ECG_CONDITIONS: EcgCondition[] = ECG_DOMAINS.flatMap(
+  (domain) => domain.conditions,
+);

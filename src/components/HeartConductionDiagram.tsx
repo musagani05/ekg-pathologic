@@ -153,7 +153,9 @@ export function HeartConductionDiagram({
 
   const isPartActive = (part: ConductionPartId) => activeParts.includes(part);
 
-  const atrialActive = isPartActive('right-atrium') || isPartActive('left-atrium');
+  const rightAtriumActive = isPartActive('right-atrium');
+  const leftAtriumActive = isPartActive('left-atrium');
+  const atrialActive = rightAtriumActive || leftAtriumActive;
   const ventricleActive = isPartActive('right-ventricle') || isPartActive('left-ventricle');
 
   const ventFill =
@@ -278,17 +280,59 @@ export function HeartConductionDiagram({
             {/* Atrium Kanan & Atrium Kiri */}
             <path
               d="M 196 82 C 166 94, 158 152, 188 188 L 270 192 L 268 96 C 250 80, 222 76, 196 82 Z"
-              fill={atrialActive ? 'rgba(37, 99, 235, 0.16)' : '#f8fafc'}
-              stroke={atrialActive ? '#2563eb' : '#cbd5e1'}
-              strokeWidth={atrialActive ? 2.6 : 1.8}
+              fill={
+                rightAtriumActive
+                  ? 'rgba(37, 99, 235, 0.2)'
+                  : condition.hypertrophyZone === 'right-atrium'
+                    ? 'rgba(37, 99, 235, 0.08)'
+                    : '#f8fafc'
+              }
+              stroke={
+                rightAtriumActive || condition.hypertrophyZone === 'right-atrium'
+                  ? '#2563eb'
+                  : '#cbd5e1'
+              }
+              strokeWidth={
+                rightAtriumActive
+                  ? 2.8
+                  : condition.hypertrophyZone === 'right-atrium'
+                    ? 2.2
+                    : 1.8
+              }
+              filter={
+                rightAtriumActive && condition.hypertrophyZone === 'right-atrium'
+                  ? 'url(#part-glow)'
+                  : undefined
+              }
               className="clickable-anatomy"
               onClick={() => onSelectStage(1)}
             />
             <path
               d="M 278 96 C 312 78, 366 88, 380 134 C 390 164, 376 186, 356 192 L 280 192 Z"
-              fill={atrialActive ? 'rgba(37, 99, 235, 0.16)' : '#f8fafc'}
-              stroke={atrialActive ? '#2563eb' : '#cbd5e1'}
-              strokeWidth={atrialActive ? 2.6 : 1.8}
+              fill={
+                leftAtriumActive
+                  ? 'rgba(37, 99, 235, 0.2)'
+                  : condition.hypertrophyZone === 'left-atrium'
+                    ? 'rgba(37, 99, 235, 0.08)'
+                    : '#f8fafc'
+              }
+              stroke={
+                leftAtriumActive || condition.hypertrophyZone === 'left-atrium'
+                  ? '#2563eb'
+                  : '#cbd5e1'
+              }
+              strokeWidth={
+                leftAtriumActive
+                  ? 2.8
+                  : condition.hypertrophyZone === 'left-atrium'
+                    ? 2.2
+                    : 1.8
+              }
+              filter={
+                leftAtriumActive && condition.hypertrophyZone === 'left-atrium'
+                  ? 'url(#part-glow)'
+                  : undefined
+              }
               className="clickable-anatomy"
               onClick={() => onSelectStage(1)}
             />
@@ -477,6 +521,119 @@ export function HeartConductionDiagram({
                 strokeWidth="2"
               />
             </g>
+
+            {/* INDIKATOR HALUS LOKASI BLOK KONDUKSI / ZONA ISKEMIA / PEMBESARAN RUANG (Tanpa teks menimpa jantung) */}
+            {condition.hypertrophyZone === 'right-atrium' && (
+              <path
+                d="M 194 78 C 158 92, 148 154, 184 191"
+                fill="none"
+                stroke="#2563eb"
+                strokeWidth="3.2"
+                strokeLinecap="round"
+                strokeDasharray="5 3"
+                opacity="0.85"
+                pointerEvents="none"
+              />
+            )}
+            {condition.hypertrophyZone === 'left-atrium' && (
+              <path
+                d="M 280 92 C 316 74, 372 84, 386 134 C 395 164, 380 188, 360 194"
+                fill="none"
+                stroke="#2563eb"
+                strokeWidth="3.2"
+                strokeLinecap="round"
+                strokeDasharray="5 3"
+                opacity="0.85"
+                pointerEvents="none"
+              />
+            )}
+            {condition.ischemicZone === 'anterior-lv' && (
+              <ellipse
+                cx="340"
+                cy="296"
+                rx="22"
+                ry="32"
+                transform="rotate(24 340 296)"
+                fill="rgba(220, 38, 38, 0.22)"
+                stroke="#ef4444"
+                strokeWidth="1.6"
+                strokeDasharray="3 2"
+                pointerEvents="none"
+              />
+            )}
+            {condition.ischemicZone === 'inferior' && (
+              <ellipse
+                cx="294"
+                cy="346"
+                rx="34"
+                ry="15"
+                transform="rotate(-8 294 346)"
+                fill="rgba(220, 38, 38, 0.22)"
+                stroke="#ef4444"
+                strokeWidth="1.6"
+                strokeDasharray="3 2"
+                pointerEvents="none"
+              />
+            )}
+            {condition.ischemicZone === 'subendocardial-lv' && (
+              <path
+                d="M 294 220 L 278 318 C 296 330, 336 320, 339 218"
+                fill="none"
+                stroke="#d97706"
+                strokeWidth="5"
+                strokeLinecap="round"
+                strokeDasharray="4 3"
+                opacity="0.65"
+                pointerEvents="none"
+              />
+            )}
+
+            {condition.blockedTarget === 'av-node' && (
+              <circle
+                cx="266"
+                cy="186"
+                r="13"
+                fill="none"
+                stroke="#dc2626"
+                strokeWidth="1.8"
+                strokeDasharray="3 2"
+                pointerEvents="none"
+              />
+            )}
+            {condition.blockedTarget === 'av-reentry' && (
+              <circle
+                cx="266"
+                cy="186"
+                r="14"
+                fill="none"
+                stroke="#dc2626"
+                strokeWidth="2"
+                strokeDasharray="6 3"
+                pointerEvents="none"
+              />
+            )}
+            {condition.blockedTarget === 'rbb' && (
+              <g transform="translate(274, 258)" pointerEvents="none">
+                <circle cx="0" cy="0" r="7" fill="#fef2f2" stroke="#dc2626" strokeWidth="1.8" />
+                <path
+                  d="M -3 -3 L 3 3 M 3 -3 L -3 3"
+                  stroke="#dc2626"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+              </g>
+            )}
+            {condition.blockedTarget === 'lbb' && (
+              <g transform="translate(284, 240)" pointerEvents="none">
+                <circle cx="0" cy="0" r="7" fill="#fef2f2" stroke="#dc2626" strokeWidth="1.8" />
+                <path
+                  d="M -3 -3 L 3 3 M 3 -3 L -3 3"
+                  stroke="#dc2626"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+              </g>
+            )}
 
             {/* PANAH VEKTOR AKTIF (Tanpa teks menimpa jantung) */}
             {vectors.map((vec) => {

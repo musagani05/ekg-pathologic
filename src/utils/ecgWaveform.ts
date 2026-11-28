@@ -9,6 +9,7 @@ export interface BeatStageWindows {
   tStartMs: number;
   tPeakMs: number;
   tEndMs: number;
+  uEndMs: number;
   stageWindows: Record<StageId, { startMs: number; endMs: number }>;
 }
 
@@ -25,9 +26,16 @@ export function getBeatStageWindows(
   const pEndMs = pStartMs + params.pDurationMs;
   const qrsStartMs = pStartMs + params.prIntervalMs;
   const jPointMs = qrsStartMs + params.qrsDurationMs;
-  const tEndMs = Math.min(cycleMs - 70, qrsStartMs + params.qtIntervalMs);
-  const tStartMs = Math.max(jPointMs + 34, tEndMs - params.tDurationMs);
-  const tPeakMs = tStartMs + 0.58 * (tEndMs - tStartMs);
+  const tEndMs = Math.min(cycleMs - 36, qrsStartMs + params.qtIntervalMs);
+  const tStartMs = Math.max(jPointMs + 24, tEndMs - params.tDurationMs);
+  const tPeakMs =
+    params.tSharpness === 'peaked'
+      ? tStartMs + 0.5 * (tEndMs - tStartMs)
+      : tStartMs + 0.58 * (tEndMs - tStartMs);
+  const uEndMs =
+    params.uAmpMv && Math.abs(params.uAmpMv) > 0.001
+      ? Math.min(cycleMs - 32, tEndMs + 96)
+      : tEndMs;
 
   return {
     cycleMs,
@@ -38,11 +46,12 @@ export function getBeatStageWindows(
     tStartMs,
     tPeakMs,
     tEndMs,
+    uEndMs,
     stageWindows: {
       1: { startMs: pStartMs, endMs: pEndMs },
       2: { startMs: pEndMs, endMs: qrsStartMs },
       3: { startMs: qrsStartMs, endMs: jPointMs },
-      4: { startMs: jPointMs, endMs: tEndMs },
+      4: { startMs: jPointMs, endMs: uEndMs },
     },
   };
 }
@@ -73,14 +82,23 @@ export function sampleLeadVoltageMv(
   // Tahap 1: Gelombang P
   if (t >= win.pStartMs && t <= win.pEndMs) {
     const span = win.pEndMs - win.pStartMs;
+    const pSharp = params.pSharpness === 'peaked' ? 2.55 : 1.55;
     if (params.pTerminalAmpMv && Math.abs(params.pTerminalAmpMv) > 0.001) {
-      const mid = win.pStartMs + span * 0.52;
+      const splitRatio = params.pInitialRatio ?? 0.52;
+      const mid = win.pStartMs + span * splitRatio;
       if (t <= mid) {
-        return params.pAmpMv * smoothBell((t - win.pStartMs) / (mid - win.pStartMs), 1.45);
+        const initSharp = params.pSharpness === 'peaked' ? 2.15 : 1.45;
+        return params.pAmpMv * smoothBell((t - win.pStartMs) / (mid - win.pStartMs), initSharp);
       }
       return params.pTerminalAmpMv * smoothBell((t - mid) / (win.pEndMs - mid), 1.45);
     }
-    return params.pAmpMv * smoothBell((t - win.pStartMs) / span, 1.55);
+    if (params.pNotched) {
+      const u = (t - win.pStartMs) / span;
+      const notchWindow = Math.min(1, Math.max(0, (u - 0.2) / 0.6));
+      const notchFactor = 1 - 0.28 * Math.pow(Math.sin(Math.PI * notchWindow), 2);
+      return params.pAmpMv * smoothBell(u, 1.2) * notchFactor;
+    }
+    return params.pAmpMv * smoothBell((t - win.pStartMs) / span, pSharp);
   }
 
   // Tahap 2: Segmen PR
@@ -88,20 +106,20 @@ export function sampleLeadVoltageMv(
     return 0;
   }
 
-  // Tahap 3: Kompleks QRS
+  // Tahap 3: Kompleks QRS (mendukung Q, R, R berlekuk/LBBB, S, dan R' sekunder/RBBB)
   if (t >= win.qrsStartMs && t <= win.jPointMs) {
-    const segments: Array<{ amp: number; weight: number }> = [];
+    const segments: Array<{ amp: number; weight: number; isR?: boolean }> = [];
     if (Math.abs(params.qAmpMv) > 0.001) {
       segments.push({ amp: params.qAmpMv, weight: params.qDurationMs ?? 18 });
     }
     if (Math.abs(params.rAmpMv) > 0.001) {
-      segments.push({ amp: params.rAmpMv, weight: params.rDurationMs ?? 42 });
+      segments.push({ amp: params.rAmpMv, weight: params.rDurationMs ?? 42, isR: true });
     }
     if (Math.abs(params.sAmpMv) > 0.001) {
       segments.push({ amp: params.sAmpMv, weight: params.sDurationMs ?? 24 });
     }
     if (params.rPrimeAmpMv && Math.abs(params.rPrimeAmpMv) > 0.001) {
-      segments.push({ amp: params.rPrimeAmpMv, weight: 28 });
+      segments.push({ amp: params.rPrimeAmpMv, weight: 32 });
     }
     if (segments.length === 0) return 0;
 
@@ -114,7 +132,14 @@ export function sampleLeadVoltageMv(
       const dur = (seg.weight / totalWeight) * qrsSpan;
       const end = cursor + dur;
       if (t >= cursor && t <= end) {
-        val = seg.amp * smoothBell((t - cursor) / Math.max(0.5, dur), 1.45);
+        const u = (t - cursor) / Math.max(0.5, dur);
+        if (seg.isR && params.rNotched) {
+          const notchWindow = Math.min(1, Math.max(0, (u - 0.22) / 0.56));
+          const notchFactor = 1 - 0.24 * Math.pow(Math.sin(Math.PI * notchWindow), 2);
+          val = seg.amp * smoothBell(u, 1.2) * notchFactor;
+        } else {
+          val = seg.amp * smoothBell(u, 1.45);
+        }
         break;
       }
       cursor = end;
@@ -158,10 +183,24 @@ export function sampleLeadVoltageMv(
 
     const tVal =
       t >= win.tStartMs
-        ? params.tAmpMv * asymmetricTWave(t, win.tStartMs, win.tPeakMs, win.tEndMs)
+        ? params.tSharpness === 'peaked'
+          ? params.tAmpMv *
+            smoothBell((t - win.tStartMs) / Math.max(1, win.tEndMs - win.tStartMs), 1.95)
+          : params.tAmpMv * asymmetricTWave(t, win.tStartMs, win.tPeakMs, win.tEndMs)
         : 0;
 
     return stVal + tVal;
+  }
+
+  // Gelombang U menonjol (misal pada Hipokalemia)
+  if (
+    params.uAmpMv &&
+    Math.abs(params.uAmpMv) > 0.001 &&
+    t > win.tEndMs &&
+    t <= win.uEndMs
+  ) {
+    const u = (t - win.tEndMs) / Math.max(1, win.uEndMs - win.tEndMs);
+    return params.uAmpMv * smoothBell(u, 1.65);
   }
 
   return 0;
@@ -196,13 +235,13 @@ export function getAnchorProgressForStage(
 ): number {
   const win = getBeatStageWindows(params, heartRateBpm);
   const range = win.stageWindows[stageId];
-  // Posisikan pena di sekitar 65% tahap agar gelombang dan titik aktif tampak jelas
   const targetMs = range.startMs + (range.endMs - range.startMs) * 0.68;
   return targetMs / win.cycleMs;
 }
 
 export interface SingleLeadCyclePaths {
   fullPath: string;
+  normalReferencePath: string | null;
   progressivePath: string;
   stagePaths: Record<StageId, string>;
   penPoint: { x: number; y: number };
@@ -210,22 +249,32 @@ export interface SingleLeadCyclePaths {
 }
 
 /**
- * Membangun path kurva SVG untuk tampilan 1 Lead Utama Besar (menampilkan 2 siklus berurutan yang lapang,
- * dengan siklus pertama sebagai siklus fokus utama tempat animasi pena & highlight bekerja).
+ * Membangun path kurva SVG untuk tampilan 1 Lead Utama Besar (2 siklus berurutan)
+ * sekaligus menghasilkan path garis acuan Normal secara opsional saat kondisi patologis aktif.
  */
 export function buildLargeSingleLeadPaths(options: {
   params: LeadWaveParams;
+  normalReferenceParams?: LeadWaveParams;
+  normalReferenceHeartRateBpm?: number;
   heartRateBpm: number;
   startX: number;
   baselineY: number;
   pxPerMm: number;
   cycleProgress: number;
 }): SingleLeadCyclePaths {
-  const { params, heartRateBpm, startX, baselineY, pxPerMm, cycleProgress } = options;
+  const {
+    params,
+    normalReferenceParams,
+    normalReferenceHeartRateBpm,
+    heartRateBpm,
+    startX,
+    baselineY,
+    pxPerMm,
+    cycleProgress,
+  } = options;
   const win = getBeatStageWindows(params, heartRateBpm);
 
-  // Tampilkan 2 siklus penuh agar kontinuitas ritme terlihat lapang & proporsional
-  const totalMs = win.cycleMs * 2;
+  const totalMs = Math.max(win.cycleMs * 2, 2500);
   const sampleStepMs = 3;
   const totalSteps = Math.ceil(totalMs / sampleStepMs);
 
@@ -237,6 +286,7 @@ export function buildLargeSingleLeadPaths(options: {
 
   const fullPts: string[] = [];
   const progPts: string[] = [];
+  const refPts: string[] = [];
 
   for (let i = 0; i <= totalSteps; i++) {
     const tMs = Math.min(totalMs, i * sampleStepMs);
@@ -246,6 +296,12 @@ export function buildLargeSingleLeadPaths(options: {
     fullPts.push(cmd);
     if (tMs <= activeTimeMs) {
       progPts.push(cmd);
+    }
+
+    if (normalReferenceParams) {
+      const refHr = normalReferenceHeartRateBpm ?? heartRateBpm;
+      const refY = mvToY(sampleLeadVoltageMv(normalReferenceParams, tMs, refHr));
+      refPts.push(`${i === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${refY.toFixed(2)}`);
     }
   }
 
@@ -282,6 +338,7 @@ export function buildLargeSingleLeadPaths(options: {
 
   return {
     fullPath: fullPts.join(' '),
+    normalReferencePath: normalReferenceParams ? refPts.join(' ') : null,
     progressivePath: progPts.join(' '),
     stagePaths,
     penPoint,

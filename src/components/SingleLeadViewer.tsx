@@ -4,7 +4,11 @@ import type {
   LeadId,
   StageId,
 } from '../data/ecgConditions';
-import { ALL_LEAD_IDS, STAGE_IDS } from '../data/ecgConditions';
+import {
+  ALL_LEAD_IDS,
+  NORMAL_SINUS_CONDITION,
+  STAGE_IDS,
+} from '../data/ecgConditions';
 import {
   buildCalibrationPulsePath,
   buildLargeSingleLeadPaths,
@@ -21,10 +25,10 @@ export interface SingleLeadViewerProps {
 }
 
 const SVG_WIDTH = 680;
-const SVG_HEIGHT = 368;
-const PX_PER_MM = 9.0;
-const BASELINE_Y = 208;
-const TRACE_START_X = 104;
+const SVG_HEIGHT = 396;
+const PX_PER_MM = 7.0;
+const BASELINE_Y = 202;
+const TRACE_START_X = 96;
 
 export function SingleLeadViewer({
   condition,
@@ -36,24 +40,34 @@ export function SingleLeadViewer({
 }: SingleLeadViewerProps) {
   const [showLeadPositions, setShowLeadPositions] = useState<boolean>(false);
 
+  const isPathologic = !condition.isNormalBaseline;
   const leadData = condition.leads[selectedLead];
+  const normalLeadData = NORMAL_SINUS_CONDITION.leads[selectedLead];
   const activeStageMeta = activeStage ? condition.stages[activeStage] : null;
 
   const renderPaths = useMemo(
     () =>
       buildLargeSingleLeadPaths({
         params: leadData.params,
+        normalReferenceParams: isPathologic ? normalLeadData.params : undefined,
+        normalReferenceHeartRateBpm: NORMAL_SINUS_CONDITION.heartRateBpm,
         heartRateBpm: condition.heartRateBpm,
         startX: TRACE_START_X,
         baselineY: BASELINE_Y,
         pxPerMm: PX_PER_MM,
         cycleProgress,
       }),
-    [leadData.params, condition.heartRateBpm, cycleProgress],
+    [
+      leadData.params,
+      normalLeadData.params,
+      isPathologic,
+      condition.heartRateBpm,
+      cycleProgress,
+    ],
   );
 
   const calibPath = useMemo(
-    () => buildCalibrationPulsePath(18, BASELINE_Y, PX_PER_MM),
+    () => buildCalibrationPulsePath(16, BASELINE_Y, PX_PER_MM),
     [],
   );
 
@@ -63,9 +77,10 @@ export function SingleLeadViewer({
     }
     const p = leadData.params;
     if (activeStage === 1) {
+      const notchedNote = p.pNotched ? ' (berlekuk M)' : '';
       const ampStr = p.pTerminalAmpMv
         ? `+${p.pAmpMv} / ${p.pTerminalAmpMv} mV (bifasik)`
-        : `${p.pAmpMv >= 0 ? '+' : ''}${p.pAmpMv} mV`;
+        : `${p.pAmpMv >= 0 ? '+' : ''}${p.pAmpMv} mV${notchedNote}`;
       return `Durasi Gelombang P: ${(p.pDurationMs / 1000).toFixed(2)} dtk  •  Amplitudo di Lead ${leadData.id}: ${ampStr}`;
     }
     if (activeStage === 2) {
@@ -73,16 +88,25 @@ export function SingleLeadViewer({
     }
     if (activeStage === 3) {
       const parts: string[] = [];
-      if (p.qAmpMv !== 0) parts.push(`q ${p.qAmpMv} mV`);
-      if (p.rAmpMv !== 0) parts.push(`R +${p.rAmpMv} mV`);
+      if (p.qAmpMv !== 0) parts.push(`Q ${p.qAmpMv} mV`);
+      if (p.rAmpMv !== 0) {
+        parts.push(`R +${p.rAmpMv} mV${p.rNotched ? ' (R berlekuk)' : ''}`);
+      }
       if (p.sAmpMv !== 0) parts.push(`S ${p.sAmpMv} mV`);
+      if (p.rPrimeAmpMv) {
+        parts.push(
+          p.rPrimeAmpMv > 0 ? `R' +${p.rPrimeAmpMv} mV` : `s' ${p.rPrimeAmpMv} mV`,
+        );
+      }
       return `Durasi QRS: ${(p.qrsDurationMs / 1000).toFixed(2)} dtk  •  Defleksi Lead ${leadData.id}: ${parts.join(', ')}`;
     }
     const stText =
       p.stDeviationMv === 0
         ? 'ST sejajar garis dasar (0 mV)'
         : `ST ${p.stDeviationMv > 0 ? '+' : ''}${p.stDeviationMv} mV`;
-    return `${stText}  •  Gelombang T: ${p.tAmpMv >= 0 ? '+' : ''}${p.tAmpMv} mV`;
+    const uText =
+      p.uAmpMv && Math.abs(p.uAmpMv) > 0.001 ? `  •  Gel. U +${p.uAmpMv} mV` : '';
+    return `${stText}  •  Gelombang T: ${p.tAmpMv >= 0 ? '+' : ''}${p.tAmpMv} mV${uText}`;
   }, [activeStage, leadData]);
 
   const activeRange = activeStage ? renderPaths.stageRangesPx[activeStage] : null;
@@ -128,12 +152,24 @@ export function SingleLeadViewer({
         </div>
       </header>
 
-      {/* PANEL TOGGLE POSISI LIMB & CHEST LEADS (Hanya tampil saat tombol Posisi Lead dibuka) */}
       {showLeadPositions && (
         <LeadPositionPanel
           selectedLead={selectedLead}
           onSelectLead={onSelectLead}
         />
+      )}
+
+      {isPathologic && (
+        <div className="ecg-comparison-legend" aria-label="Legenda perbandingan gelombang">
+          <span className="legend-item">
+            <span className="legend-swatch-dashed" aria-hidden="true" />
+            Normal
+          </span>
+          <span className="legend-item legend-item-active">
+            <span className="legend-swatch-solid" aria-hidden="true" />
+            Patologis
+          </span>
+        </div>
       )}
 
       <div className="ecg-single-canvas-box">
@@ -184,18 +220,18 @@ export function SingleLeadViewer({
             <g>
               <rect
                 x={activeRange.startX}
-                y={52}
+                y={46}
                 width={Math.max(6, activeRange.endX - activeRange.startX)}
-                height={SVG_HEIGHT - 104}
+                height={SVG_HEIGHT - 96}
                 rx="6"
                 fill={activeStageMeta.accentColor}
                 opacity="0.11"
               />
               <line
                 x1={(activeRange.startX + activeRange.endX) / 2}
-                y1={42}
+                y1={40}
                 x2={(activeRange.startX + activeRange.endX) / 2}
-                y2={54}
+                y2={48}
                 stroke={activeStageMeta.accentColor}
                 strokeWidth="1.6"
               />
@@ -208,9 +244,9 @@ export function SingleLeadViewer({
               <rect
                 key={`hit-${stId}`}
                 x={rng.startX}
-                y={54}
+                y={46}
                 width={Math.max(10, rng.endX - rng.startX)}
-                height={SVG_HEIGHT - 108}
+                height={SVG_HEIGHT - 96}
                 fill="transparent"
                 className="wave-stage-hitbox"
                 onClick={() => onSelectStage(stId)}
@@ -238,7 +274,7 @@ export function SingleLeadViewer({
             strokeLinejoin="round"
           />
           <text
-            x={18 + 4 * PX_PER_MM}
+            x={16 + 4 * PX_PER_MM}
             y={BASELINE_Y + 20}
             textAnchor="middle"
             fontSize="11"
@@ -248,27 +284,45 @@ export function SingleLeadViewer({
             1 mV
           </text>
 
+          {/* Lapisan 1: Garis Acuan Normal Samar (Putus-putus) saat Kondisi Patologis Aktif */}
+          {isPathologic && renderPaths.normalReferencePath && (
+            <path
+              d={renderPaths.normalReferencePath}
+              fill="none"
+              stroke="#94a3b8"
+              strokeWidth="1.6"
+              strokeDasharray="5 4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity="0.8"
+              pointerEvents="none"
+            />
+          )}
+
+          {/* Lapisan 2: Jejak Utuh Kondisi Aktif */}
           <path
             d={renderPaths.fullPath}
             fill="none"
-            stroke="#94a3b8"
-            strokeWidth="1.8"
+            stroke={isPathologic ? '#0f172a' : '#94a3b8'}
+            strokeWidth={isPathologic ? 2.35 : 1.8}
             strokeLinecap="round"
             strokeLinejoin="round"
-            opacity="0.4"
+            opacity={isPathologic ? 0.86 : 0.4}
             pointerEvents="none"
           />
 
+          {/* Lapisan 3: Jejak Progresif Tegas Kondisi Aktif */}
           <path
             d={renderPaths.progressivePath}
             fill="none"
             stroke="#0f172a"
-            strokeWidth="2.6"
+            strokeWidth={isPathologic ? 2.9 : 2.7}
             strokeLinecap="round"
             strokeLinejoin="round"
             pointerEvents="none"
           />
 
+          {/* Lapisan 4: Sorotan Segmen Tahap Aktif */}
           {activeStage && activeStageMeta && (
             <path
               d={renderPaths.stagePaths[activeStage]}
@@ -300,7 +354,7 @@ export function SingleLeadViewer({
           />
 
           {activeStageMeta ? (
-            <g transform={`translate(${activeMidX}, 28)`} pointerEvents="none">
+            <g transform={`translate(${activeMidX}, 26)`} pointerEvents="none">
               <rect
                 x="-135"
                 y="-14"
@@ -323,7 +377,7 @@ export function SingleLeadViewer({
               </text>
             </g>
           ) : (
-            <g transform="translate(340, 28)" pointerEvents="none">
+            <g transform="translate(340, 26)" pointerEvents="none">
               <rect
                 x="-125"
                 y="-14"
@@ -347,11 +401,11 @@ export function SingleLeadViewer({
             </g>
           )}
 
-          <g transform="translate(340, 344)" pointerEvents="none">
+          <g transform="translate(340, 370)" pointerEvents="none">
             <rect
-              x="-260"
+              x="-275"
               y="-14"
-              width="520"
+              width="550"
               height="24"
               rx="12"
               fill="rgba(255, 255, 255, 0.94)"

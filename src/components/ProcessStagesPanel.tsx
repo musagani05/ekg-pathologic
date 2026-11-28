@@ -88,7 +88,7 @@ export function ProcessStagesPanel({
                 <p className="logic-text">{stage.whyEcgLooksLikeThis}</p>
               </div>
 
-              {selectedLead !== 'II' && (
+              {selectedLead !== condition.defaultLead && (
                 <div className="stage-lead-note">
                   <strong>Pada Lead {selectedLead}:</strong> {leadPerspective.stageNotes[stage.id]}
                 </div>
